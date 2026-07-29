@@ -356,8 +356,8 @@ local buttonsData = {
     {"under maintenance have to wait💔🥀", "https://pastebin.com/raw/HF5U96vj"}
     
 
-{"prop","https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Prop%20script"}
-{"chat","https://raw.githubusercontent.com/Sam00-debug/Nothing-chat/refs/heads/main/Script"}
+{"prop","https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Prop%20script"},
+{"chat","https://raw.githubusercontent.com/Sam00-debug/Nothing-chat/refs/heads/main/Script"},
 {"infinite yield ","https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"}
 
 
