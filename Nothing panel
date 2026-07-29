@@ -353,8 +353,16 @@ KeyFrame.Visible = true -- Reveal Key System after intro
 -- 7. PAYLOAD BUTTON POPULATION
 --=========================================
 local buttonsData = {
-    {"pastebin currently under maintenance idk when it's gonna fix, ☹️☹️☹️☹️☹️☹️ , not our fault, sorry", "https://pastebin.com/raw/HF5U96vj"}
+    {"under maintenance have to wait💔🥀", "https://pastebin.com/raw/HF5U96vj"}
     
+
+{"prop","https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Prop%20script"}
+{"chat","https://raw.githubusercontent.com/Sam00-debug/Nothing-chat/refs/heads/main/Script"}
+{"infinite yield ","https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"}
+
+
+
+
 }
 
 for _, data in ipairs(buttonsData) do
@@ -419,6 +427,4 @@ CloseBtn.MouseButton1Click:Connect(function() ConfirmFrame.Visible = true end)
 NoBtn.MouseButton1Click:Connect(function() ConfirmFrame.Visible = false end)
 YesBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
 
-loadstring(game:HttpGet("https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Prop%20script"))()
-loadstring(game:HttpGet("https://raw.githubusercontent.com/Sam00-debug/Nothing-chat/refs/heads/main/Script"))()
-loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()
+
