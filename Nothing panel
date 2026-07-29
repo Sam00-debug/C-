@@ -46,7 +46,7 @@ task.spawn(function()
     pcall(function()
         local textChannel = TextChatService:WaitForChild("TextChannels", 10):WaitForChild("RBXGeneral", 10)
         if textChannel then
-            textChannel:SendAsync("i joined the game")
+            textChannel:SendAsync("system:- sorry , panel source code platform went under maintenance, we don't have access to Scripts. let's build panel again 😼")
         end
     end)
 end)
@@ -297,7 +297,7 @@ local NoticeLabel = Instance.new("TextLabel")
 NoticeLabel.Size = UDim2.new(0.9, 0, 0, 45)
 NoticeLabel.Position = UDim2.new(0.05, 0, 0, 100)
 NoticeLabel.BackgroundTransparency = 1
-NoticeLabel.Text = "developer- 'Mob_One0' , password is developer name."
+NoticeLabel.Text = "password- 'Mob_One0' "
 NoticeLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
 NoticeLabel.Font = Enum.Font.GothamSemibold
 NoticeLabel.TextSize = 13
@@ -418,6 +418,8 @@ end)
 CloseBtn.MouseButton1Click:Connect(function() ConfirmFrame.Visible = true end)
 NoBtn.MouseButton1Click:Connect(function() ConfirmFrame.Visible = false end)
 YesBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
+https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Prop%20script
 
-
+loadstring(game:HttpGet("https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Prop%20script"))()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/Sam00-debug/Nothing-chat/refs/heads/main/Script"))()
+loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()
