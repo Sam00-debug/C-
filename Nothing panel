@@ -418,7 +418,6 @@ end)
 CloseBtn.MouseButton1Click:Connect(function() ConfirmFrame.Visible = true end)
 NoBtn.MouseButton1Click:Connect(function() ConfirmFrame.Visible = false end)
 YesBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
-https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Prop%20script
 
 loadstring(game:HttpGet("https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Prop%20script"))()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/Sam00-debug/Nothing-chat/refs/heads/main/Script"))()
