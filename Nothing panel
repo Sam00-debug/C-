@@ -353,17 +353,8 @@ KeyFrame.Visible = true -- Reveal Key System after intro
 -- 7. PAYLOAD BUTTON POPULATION
 --=========================================
 local buttonsData = {
-    {"Nothing mini spam", "https://pastebin.com/raw/HF5U96vj"},
-    {"MECHA Robot prop", "https://pastebin.com/raw/ZMji8Vdd"},
-    {"Robot prop troll", "https://pastebin.com/raw/qrfssHWF"},
-    {"Orbital troll", "https://pastebin.com/raw/uPxRC78s"},
-    {"Light Spammer", "https://pastebin.com/raw/rTptdFtE"},
-    {"Iron man nothing v3", "https://pastebin.com/raw/wLTtAvTf"},
-    {"Nothing animation pack", "https://pastebin.com/raw/g6vUDV5t"},
-    {"Nothing Prop troll", "https://pastebin.com/raw/3JbDApWv"},
-    {"Nothing bang", "https://pastebin.com/raw/NYKYrKDu"},
-    {"Nothing music", "https://pastebin.com/raw/wSqD15J9"},
-    {"Nothing cart troll", "https://pastebin.com/raw/MYGDuCE8"}
+    {"pastebin currently under maintenance idk when it's gonna fix, ☹️☹️☹️☹️☹️☹️ , not our fault, sorry", "https://pastebin.com/raw/HF5U96vj"}
+    
 }
 
 for _, data in ipairs(buttonsData) do
@@ -427,3 +418,6 @@ end)
 CloseBtn.MouseButton1Click:Connect(function() ConfirmFrame.Visible = true end)
 NoBtn.MouseButton1Click:Connect(function() ConfirmFrame.Visible = false end)
 YesBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
+
+
+loadstring(game:HttpGet("https://raw.githubusercontent.com/Sam00-debug/Nothing-chat/refs/heads/main/Script"))()
