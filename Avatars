@@ -1,0 +1,583 @@
+-- --- Services ---
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+-- --- Variables ---
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+local wearRemote = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("Wear")
+
+local character = player.Character or player.CharacterAdded:Wait()
+player.CharacterAdded:Connect(function(char)
+	character = char
+end)
+
+-- --- Configuration ---
+local BUNDLES = {
+	["headless"] = {134082579},
+	["korblox left leg"] = {139607673},
+	["korblox right leg"] = {139607718},
+	["bazuka"] = {4416812356},
+	["sparkle wing"] = {192557913},
+	["spring fairy"] = {150381051},
+	["crown"] = {10159600649},
+	["santa legs"] = {103224430842613,92565592431265},
+	["big head"] = {1048037},
+	["stormbreak horns"] = {76479271580913},
+	["plasma wings"] = {11713968649},
+	["flaming Mohawk"] = {191101707},
+	["ghost lantern"] = {2413964589},
+	["tabby kitty"] = {10159617728},
+	["8-bit HP bar"] = {10159610478},
+	["valkrine helm"] = {1365767},
+	["skull aura"] = {14524326503},
+	["ice-fire ram skull"] = {112243615546468},
+	["hovering UFO"] = {8151404994},
+	["bubbler headphones"] = {15184892213},
+	["ghosdeeri"] = {183468963},
+	["fire horns"] = {215718515},
+	["blue fire"] = {74891470},
+	["8-bit hat"] = {10159606132},
+	["8-bit roblox coin"] = {10159622004},
+	["robux bag"] = {107320495068994},
+	["money cloud"] = {83672858218486},
+	["golden flames"] = {8666557244},
+	["bobux blaster"] = {13352926142},
+	["clown mask"] = {14228728879},
+	["Extra-Domino-Top-Hat"] = {17266399676},
+	["Winner"] = {92719239},
+	["Cursed-Blade"] = {4790788200},
+	["Headrow"] = {527364921},
+	["float animation"] = {94641155403691,18538153691,18538164337,18538170170,18538158932},
+}
+
+local selectedTargetPlayer = nil
+local WAIT_BETWEEN_ITEMS = 0.5 -- Sped up for layered clothing handling
+local isCancelling = false
+local isEquippingBody = false
+
+-- --- GUI Initialization (Professional Classic Dark Theme) ---
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "NothingAvatarsV2"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = playerGui
+
+-- Floating Draggable Reopen Widget
+local reopenBtn = Instance.new("TextButton")
+reopenBtn.Name = "ReopenBtn"
+reopenBtn.Size = UDim2.new(0.05, 0, 0.1, 0)
+reopenBtn.Position = UDim2.new(0.5, 0, 0.5, 0)
+reopenBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+reopenBtn.Text = "👕"
+reopenBtn.TextScaled = true
+reopenBtn.Visible = false
+reopenBtn.ZIndex = 100
+reopenBtn.Parent = screenGui
+Instance.new("UICorner", reopenBtn).CornerRadius = UDim.new(1, 0)
+Instance.new("UIStroke", reopenBtn).Color = Color3.fromRGB(50, 50, 50)
+
+local mainPanel = Instance.new("Frame")
+mainPanel.Name = "MainPanel"
+mainPanel.Size = UDim2.fromScale(0.32, 0.60)
+mainPanel.Position = UDim2.fromScale(0.34, 0.20)
+mainPanel.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+mainPanel.BorderSizePixel = 0
+mainPanel.Active = true
+mainPanel.Parent = screenGui
+Instance.new("UICorner", mainPanel).CornerRadius = UDim.new(0, 6)
+Instance.new("UIStroke", mainPanel).Color = Color3.fromRGB(45, 45, 45)
+
+local titleBar = Instance.new("Frame")
+titleBar.Size = UDim2.fromScale(1, 0.12)
+titleBar.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
+titleBar.BorderSizePixel = 0
+titleBar.ZIndex = 110
+titleBar.Parent = mainPanel
+Instance.new("UICorner", titleBar).CornerRadius = UDim.new(0, 6)
+
+local titleBottomFix = Instance.new("Frame")
+titleBottomFix.Size = UDim2.fromScale(1, 0.2)
+titleBottomFix.Position = UDim2.fromScale(0, 0.8)
+titleBottomFix.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
+titleBottomFix.BorderSizePixel = 0
+titleBottomFix.ZIndex = 110
+titleBottomFix.Parent = titleBar
+
+local titleText = Instance.new("TextLabel")
+titleText.Size = UDim2.fromScale(0.7, 1)
+titleText.Position = UDim2.fromScale(0.04, 0)
+titleText.BackgroundTransparency = 1
+titleText.Text = "NOTHING AVATARS"
+titleText.TextColor3 = Color3.fromRGB(220, 220, 220)
+titleText.Font = Enum.Font.GothamBlack
+titleText.TextSize = 16
+titleText.TextXAlignment = Enum.TextXAlignment.Left
+titleText.ZIndex = 111
+titleText.Parent = titleBar
+
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.fromScale(0.08, 0.6)
+closeBtn.Position = UDim2.fromScale(0.9, 0.2)
+closeBtn.BackgroundTransparency = 1
+closeBtn.Text = "X"
+closeBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextSize = 16
+closeBtn.ZIndex = 111
+closeBtn.Parent = titleBar
+
+local minBtn = Instance.new("TextButton")
+minBtn.Size = UDim2.fromScale(0.08, 0.6)
+minBtn.Position = UDim2.fromScale(0.82, 0.2)
+minBtn.BackgroundTransparency = 1
+minBtn.Text = "-"
+minBtn.TextColor3 = Color3.fromRGB(180, 180, 180)
+minBtn.Font = Enum.Font.GothamBold
+minBtn.TextSize = 18
+minBtn.ZIndex = 111
+minBtn.Parent = titleBar
+
+-- Blocker & Loading Screen
+local blockerFrame = Instance.new("Frame")
+blockerFrame.Size = UDim2.fromScale(1, 0.88)
+blockerFrame.Position = UDim2.fromScale(0, 0.12)
+blockerFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 10)
+blockerFrame.BackgroundTransparency = 0.5
+blockerFrame.Active = true
+blockerFrame.ZIndex = 100
+blockerFrame.Visible = false
+blockerFrame.Parent = mainPanel
+Instance.new("UICorner", blockerFrame).CornerRadius = UDim.new(0, 6)
+
+local blockerText = Instance.new("TextLabel")
+blockerText.Size = UDim2.fromScale(0.8, 0.2)
+blockerText.Position = UDim2.fromScale(0.1, 0.35)
+blockerText.BackgroundTransparency = 1
+blockerText.Text = "equipping wait..."
+blockerText.TextColor3 = Color3.fromRGB(255, 255, 255)
+blockerText.Font = Enum.Font.GothamBold
+blockerText.TextSize = 18
+blockerText.ZIndex = 101
+blockerText.Parent = blockerFrame
+
+local cancelBtn = Instance.new("TextButton")
+cancelBtn.Size = UDim2.fromScale(0.5, 0.12)
+cancelBtn.Position = UDim2.fromScale(0.25, 0.6)
+cancelBtn.BackgroundColor3 = Color3.fromRGB(160, 40, 40)
+cancelBtn.Text = "CANCEL"
+cancelBtn.TextColor3 = Color3.new(1, 1, 1)
+cancelBtn.Font = Enum.Font.GothamBold
+cancelBtn.TextSize = 14
+cancelBtn.ZIndex = 101
+cancelBtn.Parent = blockerFrame
+Instance.new("UICorner", cancelBtn).CornerRadius = UDim.new(0, 4)
+
+cancelBtn.MouseButton1Click:Connect(function()
+	if blockerFrame.Visible and not isEquippingBody then
+		isCancelling = true
+		cancelBtn.Text = "CANCELLING..."
+		cancelBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+	end
+end)
+
+-- --- Helper UI Functions ---
+local function createButton(name, text, pos, size, parent, inverted)
+	local btn = Instance.new("TextButton")
+	btn.Name = name
+	btn.Size = size
+	btn.Position = pos
+	btn.BackgroundColor3 = inverted and Color3.fromRGB(240, 240, 240) or Color3.fromRGB(30, 30, 30)
+	btn.Text = text
+	btn.TextColor3 = inverted and Color3.fromRGB(15, 15, 15) or Color3.fromRGB(220, 220, 220)
+	btn.Font = Enum.Font.GothamBold
+	btn.TextSize = 14
+	btn.ZIndex = 5
+	btn.Parent = parent
+	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
+	if not inverted then Instance.new("UIStroke", btn).Color = Color3.fromRGB(55, 55, 55) end
+	return btn
+end
+
+local function createList(name, pos, size, parent)
+	local scroll = Instance.new("ScrollingFrame")
+	scroll.Name = name
+	scroll.Size = size
+	scroll.Position = pos
+	scroll.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+	scroll.BorderSizePixel = 0
+	scroll.ScrollBarThickness = 4
+	scroll.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 80)
+	scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+	scroll.Visible = false
+	scroll.Active = true
+	scroll.ZIndex = 50
+	scroll.Parent = parent
+
+	local layout = Instance.new("UIListLayout", scroll)  
+	layout.Padding = UDim.new(0, 4)  
+	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center  
+	  
+	local padding = Instance.new("UIPadding", scroll)  
+	padding.PaddingTop = UDim.new(0, 6)  
+	padding.PaddingBottom = UDim.new(0, 6)  
+	  
+	Instance.new("UICorner", scroll).CornerRadius = UDim.new(0, 4)  
+	Instance.new("UIStroke", scroll).Color = Color3.fromRGB(60, 60, 60)  
+	return scroll, layout
+end
+
+local selectPlayerBtn = createButton("SelectPlayerBtn", "SELECT PLAYER", UDim2.fromScale(0.06, 0.18), UDim2.fromScale(0.88, 0.12), mainPanel, false)
+local specialItemsBtn = createButton("SpecialItemsBtn", "SPECIAL ITEMS", UDim2.fromScale(0.06, 0.35), UDim2.fromScale(0.88, 0.12), mainPanel, false)
+local copyAvatarBtn = createButton("CopyAvatarBtn", "COPY AVATAR", UDim2.fromScale(0.06, 0.75), UDim2.fromScale(0.88, 0.16), mainPanel, true)
+
+local playerList = createList("PlayerList", UDim2.fromScale(0.06, 0.32), UDim2.fromScale(0.88, 0.62), mainPanel)
+local bundleList = createList("BundleList", UDim2.fromScale(0.06, 0.49), UDim2.fromScale(0.88, 0.45), mainPanel)
+
+-- --- Universal Drag Logic Function ---
+local function makeDraggable(dragHandle, dragTarget)
+	local dragging, dragInput, dragStart, startPos
+	dragHandle.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+			dragStart = input.Position
+			startPos = dragTarget.Position
+			input.Changed:Connect(function()
+				if input.UserInputState == Enum.UserInputState.End then dragging = false end
+			end)
+		end
+	end)
+	dragHandle.InputChanged:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end
+	end)
+	UserInputService.InputChanged:Connect(function(input)
+		if input == dragInput and dragging then
+			local delta = input.Position - dragStart
+			dragTarget.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+		end
+	end)
+end
+
+makeDraggable(titleBar, mainPanel)
+makeDraggable(reopenBtn, reopenBtn)
+
+-- --- Window Controls ---
+closeBtn.MouseButton1Click:Connect(function() screenGui:Destroy() end)
+minBtn.MouseButton1Click:Connect(function()
+	mainPanel.Visible = false
+	reopenBtn.Visible = true
+end)
+reopenBtn.MouseButton1Click:Connect(function()
+	mainPanel.Visible = true
+	reopenBtn.Visible = false
+end)
+
+-- --- Core Engine Extraction & Optimization (FIXED FOR LAYERED CLOTHING) ---
+local function extractIdsFromCharacter(targetChar)
+	local extractedData = { body = {}, accessory = {}, allDict = {} }
+	if not targetChar then return extractedData end
+
+	local function registerId(rawData, isBody)
+		if not rawData then return end
+		-- Extracts ALL sets of 5+ digits (Filters out irrelevant small numbers)
+		for numStr in string.gmatch(tostring(rawData), "%d%d%d%d%d+") do
+			local idNum = tonumber(numStr)
+			-- Verify the ID is valid and hasn't been added yet
+			if idNum and idNum > 9999 and not extractedData.allDict[idNum] then
+				extractedData.allDict[idNum] = true
+				if isBody then
+					table.insert(extractedData.body, idNum)
+				else
+					table.insert(extractedData.accessory, idNum)
+				end
+			end
+		end
+	end
+
+	local hum = targetChar:FindFirstChildOfClass("Humanoid")
+	if hum then
+		pcall(function()
+			local desc = hum:GetAppliedDescription()
+			if desc then
+				-- Body scales and parts
+				local bodyTypes = {"Head", "Torso", "LeftArm", "RightArm", "LeftLeg", "RightLeg", "Face"}
+				for _, bType in ipairs(bodyTypes) do
+					if desc[bType] and desc[bType] ~= "" and desc[bType] ~= 0 then
+						registerId(desc[bType], true)
+					end
+				end
+				-- Comprehensive list including all hairs and 3D Layered Clothes
+				local accTypes = {
+					"HairAccessory", "BackAccessory", "FaceAccessory", "FrontAccessory",
+					"HatAccessory", "NeckAccessory", "ShouldersAccessory", "WaistAccessory",
+					"Shirt", "Pants", "GraphicTShirt",
+					"ShirtAccessory", "PantsAccessory", "TShirtAccessory",
+					"SweaterAccessory", "JacketAccessory", "ShortsAccessory",
+					"DressSkirtAccessory", "LeftShoeAccessory", "RightShoeAccessory"
+				}
+				for _, aType in ipairs(accTypes) do
+					if desc[aType] and desc[aType] ~= "" and desc[aType] ~= 0 then
+						registerId(desc[aType], false)
+					end
+				end
+			end
+		end)
+	end
+
+	-- SUPERCHARGED FALLBACK SCANNER
+	for _, item in ipairs(targetChar:GetDescendants()) do
+		-- 1. Catch IDs in names (e.g. "Jacket-Denim-Blue-8516609675")
+		registerId(item.Name, false)
+		
+		-- 2. Explicit fallback for standard 2D Clothes
+		if item:IsA("Shirt") then
+			registerId(item.ShirtTemplate, false)
+		elseif item:IsA("Pants") then
+			registerId(item.PantsTemplate, false)
+		elseif item:IsA("ShirtGraphic") then
+			registerId(item.Graphic, false)
+			
+		-- 3. Extract Mesh IDs for Layered Clothing & 3D Accessories missing ID tags in names
+		elseif item:IsA("MeshPart") then
+			registerId(item.MeshId, false)
+			registerId(item.TextureID, false)
+		elseif item:IsA("SpecialMesh") then
+			registerId(item.MeshId, false)
+			registerId(item.TextureId, false)
+		end
+		
+		-- 4. Deep search for hidden Values (Brookhaven obfuscates items here)
+		if item:IsA("IntValue") or item:IsA("StringValue") or item:IsA("NumberValue") then
+			registerId(item.Value, false)
+		end
+		
+		-- 5. Deep search through Attributes
+		pcall(function()
+			for _, attrValue in pairs(item:GetAttributes()) do
+				registerId(tostring(attrValue), false)
+			end
+		end)
+	end
+
+	return extractedData
+end
+
+
+local function executeEquip(targetBodyIds, targetAccessoryIds, targetDict, keepExisting)
+	local myCurrentData = extractIdsFromCharacter(character)
+
+	-- Calculate what to equip  
+	local finalBodyIds = {}  
+	for _, id in ipairs(targetBodyIds) do  
+		if not myCurrentData.allDict[id] then table.insert(finalBodyIds, id) end  
+	end  
+
+	local finalAccessoryIds = {}  
+	for _, id in ipairs(targetAccessoryIds) do  
+		if not myCurrentData.allDict[id] then table.insert(finalAccessoryIds, id) end  
+	end  
+
+	-- Calculate what to unequip (Only run if keepExisting is false/nil)  
+	local idsToUnequip = {}  
+	if not keepExisting then  
+		for id, _ in pairs(myCurrentData.allDict) do  
+			if not targetDict[id] then table.insert(idsToUnequip, id) end  
+		end  
+	end  
+
+	local totalOperations = #finalBodyIds + #finalAccessoryIds + #idsToUnequip  
+	isCancelling = false  
+	blockerText.Text = "equipping wait..."  
+
+	if totalOperations == 0 then   
+		copyAvatarBtn.Text = "ALREADY WEARING AVATAR"  
+		task.wait(1.5)  
+		copyAvatarBtn.Text = "COPY AVATAR"  
+		return   
+	end  
+	  
+	blockerFrame.Visible = true  
+
+	-- --- PHASE 1: UNEQUIP UNWANTED ITEMS (CANCELLABLE) ---  
+	if #idsToUnequip > 0 then  
+		isEquippingBody = false  
+		cancelBtn.BackgroundColor3 = Color3.fromRGB(160, 40, 40)  
+		cancelBtn.Text = "CANCEL (UNEQUIP)"  
+		  
+		for _, id in ipairs(idsToUnequip) do  
+			if isCancelling then break end  
+			pcall(function() wearRemote:InvokeServer(id) end)  
+			task.wait(WAIT_BETWEEN_ITEMS)  
+		end  
+		  
+		if isCancelling then   
+			blockerFrame.Visible = false  
+			return  
+		end  
+	end  
+	  
+	-- --- PHASE 2: EQUIP BODY (UNCANCELLABLE) ---  
+	if #finalBodyIds > 0 then  
+		isEquippingBody = true  
+		cancelBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)  
+		cancelBtn.Text = "LOADING BODY..."  
+		  
+		for _, id in ipairs(finalBodyIds) do  
+			pcall(function() wearRemote:InvokeServer(id) end)  
+			task.wait(WAIT_BETWEEN_ITEMS)  
+		end  
+	end  
+	  
+	-- --- PHASE 3: EQUIP ACCESSORIES/CLOTHING (CANCELLABLE) ---  
+	if #finalAccessoryIds > 0 then  
+		isEquippingBody = false  
+		cancelBtn.BackgroundColor3 = Color3.fromRGB(160, 40, 40)  
+		cancelBtn.Text = "CANCEL (EQUIP)"  
+		  
+		for _, id in ipairs(finalAccessoryIds) do  
+			if isCancelling then break end  
+			pcall(function() wearRemote:InvokeServer(id) end)  
+			task.wait(WAIT_BETWEEN_ITEMS)  
+		end  
+	end  
+	  
+	blockerFrame.Visible = false
+end
+
+-- --- Player Selection & Copying ---
+selectPlayerBtn.MouseButton1Click:Connect(function()
+	playerList.Visible = not playerList.Visible
+	bundleList.Visible = false
+
+	if playerList.Visible then  
+		for _, child in ipairs(playerList:GetChildren()) do  
+			if child:IsA("TextButton") then child:Destroy() end  
+		end  
+		  
+		for _, p in ipairs(Players:GetPlayers()) do  
+			if p ~= player then  
+				local pBtn = Instance.new("TextButton")  
+				pBtn.Size = UDim2.new(0.96, 0, 0, 30)  
+				pBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)  
+				pBtn.Text = p.Name  
+				pBtn.TextColor3 = Color3.new(1, 1, 1)  
+				pBtn.Font = Enum.Font.GothamMedium  
+				pBtn.TextSize = 14  
+				pBtn.ZIndex = 51   
+				pBtn.Parent = playerList  
+				Instance.new("UICorner", pBtn).CornerRadius = UDim.new(0, 3)  
+				  
+				pBtn.MouseButton1Click:Connect(function()  
+					selectedTargetPlayer = p  
+					selectPlayerBtn.Text = "SELECTED: " .. string.upper(p.Name)  
+					playerList.Visible = false  
+				end)  
+			end  
+		end  
+	end
+end)
+
+copyAvatarBtn.MouseButton1Click:Connect(function()
+	playerList.Visible = false
+	bundleList.Visible = false
+
+	if not selectedTargetPlayer then  
+		selectPlayerBtn.Text = "SELECT A PLAYER FIRST"  
+		task.wait(1.5)  
+		selectPlayerBtn.Text = selectedTargetPlayer and ("SELECTED: " .. string.upper(selectedTargetPlayer.Name)) or "SELECT PLAYER"  
+		return  
+	end  
+	  
+	local targetChar = selectedTargetPlayer.Character  
+	if not targetChar then  
+		copyAvatarBtn.Text = "PLAYER NOT SPAWNED"  
+		task.wait(1.5)  
+		copyAvatarBtn.Text = "COPY AVATAR"  
+		return  
+	end  
+
+	copyAvatarBtn.Text = "SCANNING..."  
+
+	-- HIGH EFFICIENCY MULTI-PASS: 6 passes to catch all asynchronously loaded gear/clothing  
+	local finalTargetData = { body = {}, accessory = {}, allDict = {} }  
+	local scanPasses = 6  
+	  
+	for i = 1, scanPasses do  
+		local passData = extractIdsFromCharacter(targetChar)  
+		for _, id in ipairs(passData.body) do  
+			if not finalTargetData.allDict[id] then  
+				finalTargetData.allDict[id] = true  
+				table.insert(finalTargetData.body, id)  
+			end  
+		end  
+		for _, id in ipairs(passData.accessory) do  
+			if not finalTargetData.allDict[id] then  
+				finalTargetData.allDict[id] = true  
+				table.insert(finalTargetData.accessory, id)  
+			end  
+		end  
+		if i < scanPasses then task.wait(0.3) end   
+	end  
+
+	-- Sync Body Scales and Colors  
+	local targetColors = targetChar:FindFirstChildOfClass("BodyColors")  
+	local myColors = character:FindFirstChildOfClass("BodyColors")  
+	if targetColors then  
+		if myColors then myColors:Destroy() end  
+		targetColors:Clone().Parent = character  
+	end  
+
+	local targetHum = targetChar:FindFirstChildOfClass("Humanoid")  
+	local myHum = character:FindFirstChildOfClass("Humanoid")  
+	if targetHum and myHum then  
+		for _, scaleName in ipairs({"BodyTypeScale", "BodyProportionScale", "BodyWidthScale", "BodyHeightScale", "BodyDepthScale", "HeadScale"}) do  
+			local targetScale = targetHum:FindFirstChild(scaleName)  
+			local myScale = myHum:FindFirstChild(scaleName)  
+			if targetScale and myScale then  
+				myScale.Value = targetScale.Value  
+			elseif targetScale and not myScale then  
+				targetScale:Clone().Parent = myHum  
+			end  
+		end  
+	end  
+
+	copyAvatarBtn.Text = "COPY AVATAR"  
+	task.spawn(function()  
+		executeEquip(finalTargetData.body, finalTargetData.accessory, finalTargetData.allDict, false)  
+	end)
+end)
+
+-- --- Special Items (Bundles) Logic ---
+specialItemsBtn.MouseButton1Click:Connect(function()
+	bundleList.Visible = not bundleList.Visible
+	playerList.Visible = false
+
+	if bundleList.Visible then  
+		for _, child in ipairs(bundleList:GetChildren()) do  
+			if child:IsA("TextButton") then child:Destroy() end  
+		end  
+		  
+		for bundleName, bundleIds in pairs(BUNDLES) do  
+			local bBtn = Instance.new("TextButton")  
+			bBtn.Size = UDim2.new(0.96, 0, 0, 30)  
+			bBtn.BackgroundColor3 = Color3.fromRGB(35, 35, 35)  
+			bBtn.Text = string.upper(bundleName)  
+			bBtn.TextColor3 = Color3.new(1, 1, 1)  
+			bBtn.Font = Enum.Font.GothamMedium  
+			bBtn.TextSize = 14  
+			bBtn.ZIndex = 51   
+			bBtn.Parent = bundleList  
+			Instance.new("UICorner", bBtn).CornerRadius = UDim.new(0, 3)  
+			  
+			bBtn.MouseButton1Click:Connect(function()  
+				bundleList.Visible = false  
+				task.spawn(function()  
+					local bDict = {}  
+					for _, id in ipairs(bundleIds) do bDict[id] = true end  
+					executeEquip({}, bundleIds, bDict, true)  
+				end)  
+			end)  
+		end  
+	end
+end)
