@@ -1,0 +1,419 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local TextChatService = game:GetService("TextChatService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local StarterGui = game:GetService("StarterGui")
+local Debris = game:GetService("Debris")
+
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+local lastPosition = character.PrimaryPart and character.PrimaryPart.Position or Vector3.new()
+
+local isAcrobaticsActive = false
+local isActionActive = false -- Prevents overlapping actions/spam clicking
+
+
+-- Update references on respawn
+player.CharacterAdded:Connect(function(newCharacter)
+    character = newCharacter
+    humanoid = newCharacter:WaitForChild("Humanoid")
+    lastPosition = character.PrimaryPart and character.PrimaryPart.Position or Vector3.new()
+end)
+
+-- Initial Chat Message
+task.spawn(function()
+    pcall(function()
+        local textChannel = TextChatService:WaitForChild("TextChannels", 10):WaitForChild("RBXGeneral", 10)
+        if textChannel then
+            textChannel:SendAsync("Antibang 😼 by Nothing Panel")
+        end
+    end)
+end)
+
+-- ==========================================
+-- EMOTE LOGIC FOR OP ANTIBANG
+-- ==========================================
+local Settings = { Speed = 1, StopOnMove = true }
+local CurrentTrack = nil
+local EmotID = 131722542713720
+
+local function LoadTrack(id)
+    if CurrentTrack then CurrentTrack:Stop(0.1) end
+    local animId
+    local ok, result = pcall(function() return game:GetObjects("rbxassetid://" .. tostring(id)) end)
+    if ok and result and #result > 0 and result[1]:IsA("Animation") then
+        animId = result[1].AnimationId
+    else
+        animId = "rbxassetid://" .. tostring(id)
+    end
+    
+    local newAnim = Instance.new("Animation")
+    newAnim.AnimationId = animId
+    local newTrack = humanoid:LoadAnimation(newAnim)
+    newTrack.Priority = Enum.AnimationPriority.Action4
+    newTrack.Looped = true
+    
+    for _, t in pairs(humanoid.Animator:GetPlayingAnimationTracks()) do
+        if t.Priority ~= Enum.AnimationPriority.Action4 then t:Stop(0.1) end
+    end
+    
+    newTrack:Play(0.1, 1, Settings.Speed)
+    CurrentTrack = newTrack
+end
+
+RunService.RenderStepped:Connect(function()
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        local root = character.HumanoidRootPart
+        if Settings.StopOnMove and CurrentTrack and CurrentTrack.IsPlaying and not isAcrobaticsActive then
+            local moved = (root.Position - lastPosition).Magnitude > 0.1
+            local jumped = humanoid and humanoid:GetState() == Enum.HumanoidStateType.Jumping
+            
+            if moved or jumped then
+                CurrentTrack:Stop(0.1)
+                CurrentTrack = nil
+            end
+        end
+        lastPosition = root.Position
+    end
+end)
+
+local function setCharacterCollision(enabled)
+    for _, part in pairs(character:GetDescendants()) do
+        if part:IsA("BasePart") and part.Name ~= "HumanoidRootPart" then
+            part.CanCollide = enabled
+        end
+    end
+end
+
+local function highSpeedDash(targetCFrame)
+    local rootPart = character:WaitForChild("HumanoidRootPart")
+    setCharacterCollision(false)
+    local tweenInfo = TweenInfo.new(0.1, Enum.EasingStyle.Linear)
+    local tween = TweenService:Create(rootPart, tweenInfo, {CFrame = targetCFrame})
+    tween:Play()
+    tween.Completed:Wait()
+end
+
+-- ==========================================
+-- UI CREATION
+-- ==========================================
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "NothingAntibangGui"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = player:WaitForChild("PlayerGui")
+
+-- --- CLICK SOUND HELPER ---
+local function playClickSound()
+    local s = Instance.new("Sound")
+    s.SoundId = "rbxassetid://876939830"
+    s.Parent = screenGui
+    s:Play()
+    Debris:AddItem(s, 2)
+end
+
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.fromScale(0.3, 0.7)
+mainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+mainFrame.Position = UDim2.fromScale(0.5, 0.5)
+mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+mainFrame.Active = true
+mainFrame.Draggable = true
+mainFrame.Parent = screenGui
+
+local uiCorner = Instance.new("UICorner")
+uiCorner.CornerRadius = UDim.new(0.03, 0)
+uiCorner.Parent = mainFrame
+
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Name = "Title"
+titleLabel.Size = UDim2.fromScale(0.85, 0.12)
+titleLabel.Position = UDim2.fromScale(0.03, 0)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Text = "nothing antibangs"
+titleLabel.TextColor3 = Color3.new(1, 1, 1)
+titleLabel.Font = Enum.Font.GothamBold
+titleLabel.TextScaled = true
+titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+titleLabel.Parent = mainFrame
+
+local closeBtn = Instance.new("TextButton")
+closeBtn.Name = "CloseButton"
+closeBtn.Size = UDim2.fromScale(0.09, 0.09)
+closeBtn.Position = UDim2.fromScale(0.89, 0.015)
+closeBtn.BackgroundColor3 = Color3.fromRGB(200, 40, 40)
+closeBtn.Text = "X"
+closeBtn.TextColor3 = Color3.new(1, 1, 1)
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextScaled = true
+closeBtn.Parent = mainFrame
+
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(0.2, 0)
+closeCorner.Parent = closeBtn
+
+closeBtn.MouseButton1Click:Connect(function()
+    screenGui:Destroy()
+end)
+
+local buttonContainer = Instance.new("Frame")
+buttonContainer.Name = "ButtonContainer"
+buttonContainer.Size = UDim2.fromScale(0.94, 0.82)
+buttonContainer.Position = UDim2.fromScale(0.03, 0.15)
+buttonContainer.BackgroundTransparency = 1
+buttonContainer.Parent = mainFrame
+
+local listLayout = Instance.new("UIListLayout")
+listLayout.Padding = UDim.new(0.02, 0)
+listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+listLayout.Parent = buttonContainer
+
+local function createButton(name, text, order)
+    local btn = Instance.new("TextButton")
+    btn.Name = name
+    btn.Size = UDim2.fromScale(1, 0.16)
+    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+    btn.Text = text
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.Font = Enum.Font.GothamSemibold
+    btn.TextScaled = true
+    btn.LayoutOrder = order
+    btn.Parent = buttonContainer
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0.1, 0)
+    corner.Parent = btn
+
+    return btn
+end
+
+local opAntibangBtn = createButton("OPAntibang", "Antibang (try 5 times)", 1)
+local voidAntibangBtn = createButton("VoidAntibang", "Brookhavn void Antibang", 2)
+local houseBanBtn = createButton("HouseBan", "Brookhavn House AntiTroll", 3)
+
+-- ==========================================
+-- BUTTON 1: OP ANTIBANG
+-- ==========================================
+opAntibangBtn.MouseButton1Click:Connect(function()
+    if isActionActive or not character:FindFirstChild("HumanoidRootPart") then return end
+    isActionActive = true
+    isAcrobaticsActive = true
+    
+    local rootPart = character.HumanoidRootPart
+    local originalCFrame = rootPart.CFrame
+    local camera = workspace.CurrentCamera
+    
+    local CircleCenter = (originalCFrame * CFrame.new(0, 0, 500)).Position
+    
+    local lockedCamCFrame = camera.CFrame
+    camera.CameraType = Enum.CameraType.Scriptable
+    camera.CFrame = lockedCamCFrame
+    
+    highSpeedDash(CFrame.new(CircleCenter))
+    
+    local timeElapsed = 0
+    local sequenceDuration = 4
+    local emoteTimer = 0.5 
+    
+    local currentPos = CircleCenter
+    local BilliardSpeed = 15
+    local SpinSpeed = 10
+    local CircleRadius = 2
+    local velocity = Vector3.new(1, 0, 0.7).Unit * BilliardSpeed 
+    local currentRotation = 0
+    
+    LoadTrack(EmotID)
+    
+    local connection
+    connection = RunService.Heartbeat:Connect(function(dt)
+        if not character or not character:FindFirstChild("HumanoidRootPart") then
+            if connection then connection:Disconnect() end
+            return
+        end
+        
+        timeElapsed += dt
+        emoteTimer += dt
+        
+        if emoteTimer >= 0.5 then
+            emoteTimer = 0
+            if CurrentTrack then
+                CurrentTrack:Stop() 
+                CurrentTrack:Play(0, 1, Settings.Speed)
+            end
+        end
+        
+        currentPos = currentPos + (velocity * dt)
+        local offsetXZ = Vector3.new(currentPos.X - CircleCenter.X, 0, currentPos.Z - CircleCenter.Z)
+        
+        if offsetXZ.Magnitude >= CircleRadius then
+            local normal = offsetXZ.Unit
+            currentPos = CircleCenter + normal * CircleRadius 
+            
+            local vXZ = Vector3.new(velocity.X, 0, velocity.Z)
+            local dotProduct = vXZ:Dot(normal)
+            local reflected = vXZ - (2 * dotProduct * normal)
+            velocity = Vector3.new(reflected.X, 0, reflected.Z)
+        end
+        
+        currentRotation += SpinSpeed * dt
+        rootPart.CFrame = CFrame.new(currentPos) * CFrame.Angles(0, currentRotation, 0)
+    end)
+    
+    task.wait(sequenceDuration)
+    if connection then connection:Disconnect() end
+    if CurrentTrack then
+        CurrentTrack:Stop()
+        CurrentTrack = nil
+    end
+    
+    highSpeedDash(originalCFrame)
+    task.wait(0.2)
+    setCharacterCollision(true)
+    camera.CameraType = Enum.CameraType.Custom
+    
+    isAcrobaticsActive = false
+    isActionActive = false
+end)
+
+-- ==========================================
+-- BUTTON 2: VOID ANTIBANG
+-- ==========================================
+voidAntibangBtn.MouseButton1Click:Connect(function()
+    if isActionActive or not character:FindFirstChild("HumanoidRootPart") then return end
+    isActionActive = true
+
+    local rootPart = character.HumanoidRootPart
+    local originalCFrame = rootPart.CFrame
+
+    setCharacterCollision(false)
+    
+    -- Dashing into position instead of instant TP
+    local targetVoidCFrame = CFrame.new(0, -499, 0) * CFrame.Angles(math.rad(90), 0, 0)
+    highSpeedDash(targetVoidCFrame)
+    
+    rootPart.Anchored = true
+
+    task.wait(4)
+
+    rootPart.Anchored = false
+    
+    -- Dashing back to original location
+    highSpeedDash(originalCFrame)
+    
+    setCharacterCollision(true)
+    isActionActive = false
+end)
+
+--- ==========================================
+-- MANUAL COORDINATES DATABASE
+-- ==========================================
+local manualPositions = {
+    -- Motels
+    Vector3.new(288, 5, 209), Vector3.new(257, 5, 278), Vector3.new(288, 22, 209), Vector3.new(257, 22, 278),
+    -- Houses
+    Vector3.new(-21, 35, 445), Vector3.new(151, 36, 459), Vector3.new(234, 37, 463), Vector3.new(255, 35, 373),
+    Vector3.new(146, 35, 371), Vector3.new(-21, 35, 366), Vector3.new(-191, 35, -232), Vector3.new(-351, 35, -229),
+    Vector3.new(-456, 35, -224), Vector3.new(-453, 35, -318), Vector3.new(-356, 35, -313), Vector3.new(-194, 35, -313),
+    Vector3.new(-424, 68, -446), Vector3.new(-353, 68, -510), Vector3.new(-38, 10, 2240),
+    -- North / South Estates
+    Vector3.new(-66, 84, -411), Vector3.new(190, 51, 569),
+    -- Apartments
+    Vector3.new(-7, 20, -143), Vector3.new(-7, 36, -143)
+}
+
+local function getPlayerHouse()
+    local lots = workspace:FindFirstChild("001_Lots")
+    if not lots then return nil end
+    local house = lots:FindFirstChild(player.Name .. "House") or lots:FindFirstChild(player.Name .. " House")
+    if house and house:FindFirstChild("HousePickedByPlayer") and house.HousePickedByPlayer:FindFirstChild("HouseModel") then
+        return house
+    end
+    return nil
+end
+
+local function getClosestManualPosition(houseFolder)
+    -- Finds any loaded part in your house to identify which lot you are at
+    local samplePart = houseFolder:FindFirstChildWhichIsA("BasePart", true)
+    if not samplePart then return nil end
+    
+    local samplePos = samplePart.Position
+    local closestPos = manualPositions[1]
+    local minDistance = math.huge
+    
+    for _, pos in ipairs(manualPositions) do
+        local dist = (samplePos - pos).Magnitude
+        if dist < minDistance then
+            minDistance = dist
+            closestPos = pos
+        end
+    end
+    
+    return closestPos
+end
+
+-- ==========================================
+-- BUTTON 3: HOUSE BAN (MANUAL POSITIONS FIXED)
+-- ==========================================
+houseBanBtn.MouseButton1Click:Connect(function()
+    if isActionActive or not character:FindFirstChild("HumanoidRootPart") then return end
+    
+    -- 1. Verify house is spawned
+    local houseFolder = getPlayerHouse()
+    if not houseFolder then
+StarterGui:SetCore("SendNotification", {
+        Title = "Anti troll 🤖",
+        Text = "Spawn a House First 🏠",
+        Duration = 40
+    })
+ 
+ return end 
+    
+    -- 2. Get the closest manual coordinate to your house
+    local targetPosition = getClosestManualPosition(houseFolder)
+    if not targetPosition then return end
+
+    isActionActive = true
+
+    local rootPart = character.HumanoidRootPart
+    local originalCFrame = rootPart.CFrame
+
+    -- 3. Teleport to your manual house position
+    rootPart.CFrame = CFrame.new(targetPosition + Vector3.new(0, 2, 0)) -- Slight padding upwards to avoid getting stuck in floors
+
+    -- 4. Wait exactly 1 second
+    task.wait(1)
+
+    local houseModel = houseFolder.HousePickedByPlayer.HouseModel
+    local clearPropsRemote = houseModel:FindFirstChild("Permissions:ClearProps")
+    local disallowRemote = houseModel:FindFirstChild("Permissions:Disallow")
+
+    -- 5. Prop delete remote event
+    if clearPropsRemote then
+        task.spawn(function()
+            pcall(function()
+                clearPropsRemote:InvokeServer()
+            end)
+        end)
+    end
+
+    -- 6. Ban all remote event
+    if disallowRemote then
+        for _, target in pairs(Players:GetPlayers()) do
+            if target ~= player then
+                pcall(function() disallowRemote:FireServer(target) end)
+            end
+        end
+    end
+
+    -- 7. Wait exactly 0.2 seconds
+    task.wait(0.2)
+
+    -- 8. Spawn back to original position
+    rootPart.CFrame = originalCFrame
+
+    isActionActive = false
+end)
