@@ -1,0 +1,585 @@
+-- [[ Initialization & Setup ]] --
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+-- [[ Global State (Persists across executions) ]] --
+if type(_G.SecretPlaceProState) ~= "table" then
+    _G.SecretPlaceProState = {
+        Toggles = {
+            RGBName = false, RGBBio = false, RGBHoverboard = false, RGBMusicBox = false,
+            RGBSkin = false, RGBHouseName = false, RGBHouse = false, LoopWindows = false,
+            HouseMusic = false
+        },
+        RGBDelay = 0.5,
+        CurrentColorMode = "Switch",
+        MusicID = " music id",
+        LogicRunning = false
+    }
+end
+local State = _G.SecretPlaceProState
+
+-- Clean up old GUI
+local uiName = "SecretPlaceProGUI"
+local parentGui = pcall(function() return CoreGui.Name end) and CoreGui or LocalPlayer:WaitForChild("PlayerGui")
+if parentGui:FindFirstChild(uiName) then parentGui[uiName]:Destroy() end
+
+local CycleColors = {
+    Color3.new(1, 0, 0),        -- Red
+    Color3.new(1, 0.5, 0),      -- Orange
+    Color3.new(1, 1, 0),        -- Yellow
+    Color3.new(0, 1, 0),        -- Green
+    Color3.new(0, 0, 1),        -- Blue
+    Color3.new(0.5, 0, 1),      -- Purple
+    Color3.new(1, 0, 1)         -- Pink
+}
+local SkinColors = {"Really red", "Deep orange", "New Yeller", "Lime green", "Really blue", "Hot pink", "Institutional white"}
+
+-- Theme Colors
+local Theme = {
+    Background = Color3.fromRGB(20, 20, 25),
+    TopBar = Color3.fromRGB(30, 30, 38),
+    Section = Color3.fromRGB(25, 25, 32),
+    Text = Color3.fromRGB(240, 240, 245),
+    SubText = Color3.fromRGB(180, 180, 190),
+    Accent = Color3.fromRGB(88, 101, 242), -- Modern Blurple
+    Success = Color3.fromRGB(67, 181, 129),
+    Danger = Color3.fromRGB(240, 71, 71),
+    ToggleOff = Color3.fromRGB(60, 60, 70)
+}
+
+-- [[ UI Creation ]] --
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = uiName
+ScreenGui.Parent = parentGui
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 400, 0, 300)
+MainFrame.Position = UDim2.new(0.5, -200, 0.5, -150)
+MainFrame.BackgroundColor3 = Theme.Background
+MainFrame.BorderSizePixel = 0
+MainFrame.ClipsDescendants = true
+MainFrame.Parent = ScreenGui
+
+local constraint = Instance.new("UISizeConstraint")
+constraint.MinSize = Vector2.new(200, 200)
+constraint.MaxSize = Vector2.new(600, 800)
+constraint.Parent = MainFrame
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = UDim.new(0, 10)
+MainCorner.Parent = MainFrame
+
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Color = Color3.fromRGB(40, 40, 50)
+MainStroke.Thickness = 1
+MainStroke.Parent = MainFrame
+
+-- [[ Custom Window Dragging ]] --
+local TopBar = Instance.new("Frame")
+TopBar.Size = UDim2.new(1, 0, 0, 45)
+TopBar.BackgroundColor3 = Theme.TopBar
+TopBar.BorderSizePixel = 0
+TopBar.Parent = MainFrame
+
+local dragging, dragInput, dragStart, startPos
+TopBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then dragging = false end
+        end)
+    end
+end)
+TopBar.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -100, 1, 0)
+Title.Position = UDim2.new(0, 15, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "Secret Place Panel"
+Title.TextColor3 = Theme.Text
+Title.TextSize = 18
+Title.Font = Enum.Font.GothamBold
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = TopBar
+
+-- [[ Round Draggable Reopen Button ]] --
+local ReopenBtn = Instance.new("TextButton")
+ReopenBtn.Size = UDim2.new(0, 50, 0, 50)
+ReopenBtn.Position = UDim2.new(0, 20, 0.5, -25)
+ReopenBtn.BackgroundColor3 = Theme.Accent
+ReopenBtn.Text = "SP"
+ReopenBtn.TextColor3 = Theme.Text
+ReopenBtn.Font = Enum.Font.GothamBold
+ReopenBtn.TextSize = 18
+ReopenBtn.Visible = false
+ReopenBtn.Parent = ScreenGui
+Instance.new("UICorner", ReopenBtn).CornerRadius = UDim.new(1, 0)
+Instance.new("UIStroke", ReopenBtn).Thickness = 2
+Instance.new("UIStroke", ReopenBtn).Color = Color3.fromRGB(255, 255, 255)
+
+-- Reopen Button Drag & Click Logic
+local rDragging, rDragInput, rDragStart, rStartPos
+local clickStartPos = nil
+
+ReopenBtn.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        rDragging = true
+        rDragStart = input.Position
+        rStartPos = ReopenBtn.Position
+        clickStartPos = input.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then 
+                rDragging = false 
+            end
+        end)
+    end
+end)
+
+ReopenBtn.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        rDragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == rDragInput and rDragging then
+        local delta = input.Position - rDragStart
+        ReopenBtn.Position = UDim2.new(rStartPos.X.Scale, rStartPos.X.Offset + delta.X, rStartPos.Y.Scale, rStartPos.Y.Offset + delta.Y)
+    end
+end)
+
+ReopenBtn.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        -- Differentiate a click from a drag based on distance moved
+        if clickStartPos and (input.Position - clickStartPos).Magnitude < 5 then
+            MainFrame.Visible = true
+            ReopenBtn.Visible = false
+        end
+    end
+end)
+
+-- Minimize & Close Buttons
+local function CreateWinBtn(text, color, posOffset, callback)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 30, 0, 30)
+    btn.Position = UDim2.new(1, posOffset, 0.5, -15)
+    btn.BackgroundColor3 = color
+    btn.Text = text
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 14
+    btn.Parent = TopBar
+    btn.AutoButtonColor = false
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+    btn.MouseButton1Click:Connect(callback)
+    return btn
+end
+
+-- MinBtn now toggles the Reopen Button visibility
+CreateWinBtn("-", Theme.ToggleOff, -80, function()
+    MainFrame.Visible = false
+    ReopenBtn.Visible = true
+end)
+
+CreateWinBtn("X", Theme.Danger, -40, function()
+    ScreenGui:Destroy()
+    -- Note: We don't stop the logic here so it persists in the background.
+end)
+
+-- Scrollable Frame
+local ScrollFrame = Instance.new("ScrollingFrame")
+ScrollFrame.Size = UDim2.new(1, 0, 1, -45)
+ScrollFrame.Position = UDim2.new(0, 0, 0, 45)
+ScrollFrame.BackgroundTransparency = 1
+ScrollFrame.ScrollBarThickness = 4
+ScrollFrame.ScrollBarImageColor3 = Theme.ToggleOff
+ScrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0) 
+ScrollFrame.Parent = MainFrame
+
+local ScrollPadding = Instance.new("UIPadding")
+ScrollPadding.PaddingTop = UDim.new(0, 15)
+ScrollPadding.PaddingBottom = UDim.new(0, 15)
+ScrollPadding.PaddingLeft = UDim.new(0, 15)
+ScrollPadding.PaddingRight = UDim.new(0, 15)
+ScrollPadding.Parent = ScrollFrame
+
+local ScrollLayout = Instance.new("UIListLayout")
+ScrollLayout.SortOrder = Enum.SortOrder.LayoutOrder
+ScrollLayout.Padding = UDim.new(0, 10)
+ScrollLayout.Parent = ScrollFrame
+
+-- [[ UI Component Library ]] --
+local function CreateSection(titleText)
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(1, 0, 0, 25)
+    Label.BackgroundTransparency = 1
+    Label.Text = titleText
+    Label.TextColor3 = Theme.SubText
+    Label.TextSize = 14
+    Label.Font = Enum.Font.GothamBold
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.Parent = ScrollFrame
+end
+
+local function CreateToggle(text, toggleKey)
+    local Frame = Instance.new("Frame")
+    Frame.Size = UDim2.new(1, 0, 0, 45)
+    Frame.BackgroundColor3 = Theme.Section
+    Frame.Parent = ScrollFrame
+    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 8)
+
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(1, -70, 1, 0)
+    Label.Position = UDim2.new(0, 15, 0, 0)
+    Label.BackgroundTransparency = 1
+    Label.Text = text
+    Label.TextColor3 = Theme.Text
+    Label.TextSize = 16
+    Label.Font = Enum.Font.GothamMedium
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.Parent = Frame
+
+    local ToggleBtn = Instance.new("TextButton")
+    ToggleBtn.Size = UDim2.new(0, 46, 0, 24)
+    ToggleBtn.Position = UDim2.new(1, -60, 0.5, -12)
+    -- Initialize color visually based on global state
+    ToggleBtn.BackgroundColor3 = State.Toggles[toggleKey] and Theme.Success or Theme.ToggleOff
+    ToggleBtn.Text = ""
+    ToggleBtn.Parent = Frame
+    Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(1, 0)
+    
+    local Indicator = Instance.new("Frame")
+    Indicator.Size = UDim2.new(0, 20, 0, 20)
+    -- Initialize position visually based on global state
+    Indicator.Position = State.Toggles[toggleKey] and UDim2.new(1, -22, 0.5, -10) or UDim2.new(0, 2, 0.5, -10)
+    Indicator.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Indicator.Parent = ToggleBtn
+    Instance.new("UICorner", Indicator).CornerRadius = UDim.new(1, 0)
+    
+    ToggleBtn.MouseButton1Click:Connect(function()
+        State.Toggles[toggleKey] = not State.Toggles[toggleKey]
+        local currentToggleState = State.Toggles[toggleKey]
+        
+        TweenService:Create(ToggleBtn, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+            BackgroundColor3 = currentToggleState and Theme.Success or Theme.ToggleOff
+        }):Play()
+        TweenService:Create(Indicator, TweenInfo.new(0.25, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {
+            Position = currentToggleState and UDim2.new(1, -22, 0.5, -10) or UDim2.new(0, 2, 0.5, -10)
+        }):Play()
+    end)
+end
+
+local function CreateButton(text, callback)
+    local Btn = Instance.new("TextButton")
+    Btn.Size = UDim2.new(1, 0, 0, 45)
+    Btn.BackgroundColor3 = Theme.Section
+    Btn.Text = text
+    Btn.TextColor3 = Theme.Text
+    Btn.TextSize = 16
+    Btn.Font = Enum.Font.GothamMedium
+    Btn.Parent = ScrollFrame
+    Btn.AutoButtonColor = false
+    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 8)
+    
+    Btn.MouseButton1Down:Connect(function() TweenService:Create(Btn, TweenInfo.new(0.1), {BackgroundColor3 = Theme.TopBar}):Play() end)
+    Btn.MouseButton1Up:Connect(function() TweenService:Create(Btn, TweenInfo.new(0.1), {BackgroundColor3 = Theme.Section}):Play() end)
+    Btn.MouseLeave:Connect(function() TweenService:Create(Btn, TweenInfo.new(0.1), {BackgroundColor3 = Theme.Section}):Play() end)
+    Btn.MouseButton1Click:Connect(callback)
+end
+
+local function CreateSlider(text, min, max)
+    local Frame = Instance.new("Frame")
+    Frame.Size = UDim2.new(1, 0, 0, 60)
+    Frame.BackgroundColor3 = Theme.Section
+    Frame.Parent = ScrollFrame
+    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 8)
+
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(1, -30, 0, 25)
+    Label.Position = UDim2.new(0, 15, 0, 5)
+    Label.BackgroundTransparency = 1
+    Label.Text = text .. ": " .. tostring(State.RGBDelay)
+    Label.TextColor3 = Theme.Text
+    Label.TextSize = 14
+    Label.Font = Enum.Font.GothamMedium
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.Parent = Frame
+
+    local SliderBG = Instance.new("TextButton")
+    SliderBG.Size = UDim2.new(1, -30, 0, 6)
+    SliderBG.Position = UDim2.new(0, 15, 0, 40)
+    SliderBG.BackgroundColor3 = Theme.ToggleOff
+    SliderBG.Text = ""
+    SliderBG.Parent = Frame
+    Instance.new("UICorner", SliderBG).CornerRadius = UDim.new(1, 0)
+
+    local Fill = Instance.new("Frame")
+    -- Initialize Fill Size based on global state
+    local relStart = math.clamp((State.RGBDelay - min) / (max - min), 0, 1)
+    Fill.Size = UDim2.new(relStart, 0, 1, 0)
+    Fill.BackgroundColor3 = Theme.Accent
+    Fill.Parent = SliderBG
+    Instance.new("UICorner", Fill).CornerRadius = UDim.new(1, 0)
+
+    local Dot = Instance.new("Frame")
+    Dot.Size = UDim2.new(0, 14, 0, 14)
+    Dot.Position = UDim2.new(1, -7, 0.5, -7)
+    Dot.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Dot.Parent = Fill
+    Instance.new("UICorner", Dot).CornerRadius = UDim.new(1, 0)
+
+    local sDragging = false
+    local function update(input)
+        local relPos = math.clamp((input.Position.X - SliderBG.AbsolutePosition.X) / SliderBG.AbsoluteSize.X, 0, 1)
+        Fill.Size = UDim2.new(relPos, 0, 1, 0)
+        local value = min + (max - min) * relPos
+        value = math.floor(value * 10) / 10
+        State.RGBDelay = value
+        Label.Text = text .. ": " .. tostring(value)
+    end
+
+    SliderBG.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            sDragging = true; update(input)
+        end
+    end)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            sDragging = false
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if sDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            update(input)
+        end
+    end)
+end
+
+-- [[ Build UI Elements ]] --
+
+CreateSection("General Settings")
+CreateSlider("RGB Delay Speed", 0.1, 2)
+
+-- Segmented Control for Color Mode
+local ModeFrame = Instance.new("Frame")
+ModeFrame.Size = UDim2.new(1, 0, 0, 45)
+ModeFrame.BackgroundColor3 = Theme.Section
+ModeFrame.Parent = ScrollFrame
+Instance.new("UICorner", ModeFrame).CornerRadius = UDim.new(0, 8)
+
+local ModeLayout = Instance.new("UIListLayout")
+ModeLayout.FillDirection = Enum.FillDirection.Horizontal
+ModeLayout.SortOrder = Enum.SortOrder.LayoutOrder
+ModeLayout.Parent = ModeFrame
+
+local modeBtns = {}
+local function CreateModeBtn(text)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1/3, 0, 1, 0)
+    btn.BackgroundColor3 = Theme.Section
+    btn.Text = text
+    btn.TextColor3 = Theme.SubText
+    btn.Font = Enum.Font.GothamMedium
+    btn.TextSize = 14
+    btn.Parent = ModeFrame
+    btn.AutoButtonColor = false
+    
+    local underline = Instance.new("Frame")
+    underline.Size = UDim2.new(0, 0, 0, 3)
+    underline.Position = UDim2.new(0.5, 0, 1, -3)
+    underline.AnchorPoint = Vector2.new(0.5, 0)
+    underline.BackgroundColor3 = Theme.Accent
+    underline.BorderSizePixel = 0
+    underline.Parent = btn
+
+    btn.MouseButton1Click:Connect(function()
+        State.CurrentColorMode = text
+        for name, data in pairs(modeBtns) do
+            local isSelected = (name == text)
+            TweenService:Create(data.btn, TweenInfo.new(0.2), {TextColor3 = isSelected and Theme.Text or Theme.SubText}):Play()
+            TweenService:Create(data.line, TweenInfo.new(0.3, Enum.EasingStyle.Quint), {Size = isSelected and UDim2.new(0.8, 0, 0, 3) or UDim2.new(0, 0, 0, 3)}):Play()
+        end
+    end)
+    modeBtns[text] = {btn = btn, line = underline}
+end
+
+CreateModeBtn("Dynamic")
+CreateModeBtn("Switch")
+CreateModeBtn("Disco")
+
+-- Init Mode UI based on global state
+local activeMode = State.CurrentColorMode
+modeBtns[activeMode].btn.TextColor3 = Theme.Text
+modeBtns[activeMode].line.Size = UDim2.new(0.8, 0, 0, 3)
+
+CreateSection("Avatar RGB")
+CreateToggle("RGB Name", "RGBName")
+CreateToggle("RGB Bio", "RGBBio")
+CreateToggle("RGB Hoverboard", "RGBHoverboard")
+CreateToggle("RGB Music Box", "RGBMusicBox")
+CreateToggle("RGB Skin", "RGBSkin")
+
+CreateSection("House RGB & Control")
+CreateToggle("RGB House Name", "RGBHouseName")
+CreateToggle("RGB House Color", "RGBHouse")
+CreateToggle("Loop Windows", "LoopWindows")
+
+-- Custom House Music Row
+local MusicFrame = Instance.new("Frame")
+MusicFrame.Size = UDim2.new(1, 0, 0, 45)
+MusicFrame.BackgroundTransparency = 1
+MusicFrame.Parent = ScrollFrame
+
+local MusicInput = Instance.new("TextBox")
+MusicInput.Size = UDim2.new(0.65, -5, 1, 0)
+MusicInput.BackgroundColor3 = Theme.Section
+MusicInput.TextColor3 = Theme.Text
+MusicInput.PlaceholderText = "Enter Music ID..."
+MusicInput.Text = State.MusicID
+MusicInput.TextSize = 14
+MusicInput.Font = Enum.Font.Gotham
+MusicInput.ClearTextOnFocus = false
+MusicInput.Parent = MusicFrame
+Instance.new("UICorner", MusicInput).CornerRadius = UDim.new(0, 8)
+Instance.new("UIPadding", MusicInput).PaddingLeft = UDim.new(0, 10)
+
+MusicInput.FocusLost:Connect(function()
+    State.MusicID = MusicInput.Text
+end)
+
+local MusicToggleBtn = Instance.new("TextButton")
+MusicToggleBtn.Size = UDim2.new(0.35, -5, 1, 0)
+MusicToggleBtn.Position = UDim2.new(0.65, 10, 0, 0)
+MusicToggleBtn.BackgroundColor3 = State.Toggles.HouseMusic and Theme.Success or Theme.ToggleOff
+MusicToggleBtn.Text = State.Toggles.HouseMusic and "Playing" or "Play Music"
+MusicToggleBtn.TextColor3 = Theme.Text
+MusicToggleBtn.TextSize = 14
+MusicToggleBtn.Font = Enum.Font.GothamBold
+MusicToggleBtn.Parent = MusicFrame
+Instance.new("UICorner", MusicToggleBtn).CornerRadius = UDim.new(0, 8)
+
+MusicToggleBtn.MouseButton1Click:Connect(function()
+    State.Toggles.HouseMusic = not State.Toggles.HouseMusic
+    State.MusicID = MusicInput.Text
+    if State.Toggles.HouseMusic then
+        MusicToggleBtn.Text = "Playing"
+        TweenService:Create(MusicToggleBtn, TweenInfo.new(0.2), {BackgroundColor3 = Theme.Success}):Play()
+        pcall(function() ReplicatedStorage.RE["1Player1sHous1e"]:FireServer("PickHouseMusicText", State.MusicID, true) end)
+    else
+        MusicToggleBtn.Text = "Play Music"
+        TweenService:Create(MusicToggleBtn, TweenInfo.new(0.2), {BackgroundColor3 = Theme.ToggleOff}):Play()
+        pcall(function() ReplicatedStorage.RE["1Player1sHous1e"]:FireServer("PickHouseMusicText", "0", true) end)
+    end
+end)
+
+local function GetPlayerHouse()
+    local lotFolder = workspace:FindFirstChild("001_Lots")
+    if lotFolder then
+        for _, house in pairs(lotFolder:GetChildren()) do
+            local owner = house:FindFirstChild("HousePickedByPlayer")
+            if owner and owner.Value == LocalPlayer.Name then return house end
+        end
+    end
+    return nil
+end
+
+CreateSection("Utility Actions")
+CreateButton("Delete House Props", function()
+    pcall(function()
+        local clearRemote = ReplicatedStorage:FindFirstChild("clearPropsRemote", true)
+        if clearRemote then clearRemote:InvokeServer() end
+    end)
+end)
+CreateButton("House Ban All", function()
+    local myHouse = GetPlayerHouse()
+    if myHouse then
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer then pcall(function() myHouse.HouseModel["Permissions:Disallow"]:FireServer(p) end) end
+        end
+    end
+end)
+CreateButton("House Unban All", function()
+    local myHouse = GetPlayerHouse()
+    if myHouse then
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer then pcall(function() myHouse.HouseModel["Permissions:Allow"]:FireServer(p) end) end
+        end
+    end
+end)
+CreateButton("Invite Family (All)", function()
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer then
+            pcall(function() ReplicatedStorage.Remotes.InvitePlayerToFamily:FireServer(p.UserId, "FamilyInviteMenu") end)
+        end
+    end
+end)
+CreateButton("House Party (Invite All)", function()
+    local userIds = {}
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer then table.insert(userIds, p.UserId) end
+    end
+    pcall(function() ReplicatedStorage.Remotes.StartFreeParty:FireServer("HouseParty", userIds) end)
+end)
+CreateButton("Teleport to House", function()
+    pcall(function() ReplicatedStorage.Remotes.HS_HouseSaves:InvokeServer() end)
+end)
+
+-- [[ Background Logic Loop ]] --
+-- Only start if it's not already running globally
+if not State.LogicRunning then
+    State.LogicRunning = true
+    task.spawn(function()
+        local colorIndex = 1
+        while task.wait(State.RGBDelay) do
+            
+            local currentColor = Color3.new(1, 1, 1)
+            local currentSkin = "Institutional white"
+            
+            if State.CurrentColorMode == "Switch" then
+                currentColor = CycleColors[colorIndex]
+                currentSkin = SkinColors[colorIndex]
+                colorIndex = colorIndex % #CycleColors + 1
+            elseif State.CurrentColorMode == "Dynamic" then
+                currentColor = Color3.fromHSV((tick() % 5) / 5, 1, 1)
+                currentSkin = SkinColors[colorIndex]
+                colorIndex = colorIndex % #SkinColors + 1
+            elseif State.CurrentColorMode == "Disco" then
+                currentColor = Color3.new(math.random(), math.random(), math.random())
+                currentSkin = SkinColors[math.random(1, #SkinColors)]
+            end
+            
+            -- Read off of global `State.Toggles` instead of local `Toggles`
+            if State.Toggles.RGBName then pcall(function() ReplicatedStorage.RE["1RPNam1eColo1r"]:FireServer("PickingRPNameColor", currentColor) end) end
+            if State.Toggles.RGBBio then pcall(function() ReplicatedStorage.RE["1RPNam1eColo1r"]:FireServer("PickingRPBioColor", currentColor) end) end
+            if State.Toggles.RGBHouseName then pcall(function() ReplicatedStorage.RE["1RPHous1eEven1tColo1r"]:FireServer("PickingBusinessNameColor", currentColor) end) end
+            if State.Toggles.RGBHoverboard then pcall(function() LocalPlayer.PlayerGui.MainGUIHandler.NoMotorVehicleControl.NoMotorColorPicks.SetColor:FireServer(currentColor) end) end
+            if State.Toggles.RGBMusicBox then pcall(function() LocalPlayer.PlayerGui.ToolGui.ToolSettings.Settings.PropsColor.SetColor:FireServer(currentColor) end) end
+            if State.Toggles.RGBSkin then pcall(function() ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("ChangeBodyColor"):FireServer(currentSkin) end) end
+            if State.Toggles.RGBHouse then pcall(function() LocalPlayer.PlayerGui.MainGUIHandler.HouseControlPanel.HouseColorPicker.SetColor:FireServer(currentColor) end) end
+            if State.Toggles.LoopWindows then pcall(function() ReplicatedStorage.RE["1Player1sHous1e"]:FireServer("Curtains") end) end
+        end
+    end)
+end
