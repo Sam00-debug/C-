@@ -1,0 +1,226 @@
+-- Services
+local Players = game:GetService("Players")
+local TextChatService = game:GetService("TextChatService")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-----------------------------------------------------------
+-- 1. MAIN UI SETUP
+-----------------------------------------------------------
+local mainGui = Instance.new("ScreenGui")
+mainGui.Name = "LightChatPro"
+mainGui.ResetOnSpawn = false
+mainGui.Parent = playerGui
+
+
+-- Audio Setup
+local ClickSound = Instance.new("Sound")
+ClickSound.SoundId = "rbxassetid://876939830"
+ClickSound.Volume = 1
+ClickSound.Parent = mainGui
+local function PlayClick()
+    ClickSound:Play()
+end
+task.spawn(function()
+end)
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.fromScale(0.25, 0.3) 
+mainFrame.Position = UDim2.fromScale(0.35, 0.3)
+mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+mainFrame.BorderSizePixel = 0
+mainFrame.Visible = true 
+mainFrame.Parent = mainGui
+
+local stroke = Instance.new("UIStroke")
+stroke.Parent = mainFrame
+stroke.Thickness = 3
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.fromScale(0.8, 0.15)
+title.Position = UDim2.fromScale(0.05, 0.05)
+title.BackgroundTransparency = 1
+title.Text = "💬Spammer"
+title.TextColor3 = Color3.new(1, 1, 1)
+title.TextScaled = true
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Font = Enum.Font.GothamBold
+title.Parent = mainFrame
+
+-- Close Button (X) - Destroys UI completely
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.fromScale(0.13, 0.15)
+closeBtn.Position = UDim2.fromScale(0.95, 0.05)
+closeBtn.AnchorPoint = Vector2.new(1, 0)
+closeBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+closeBtn.Text = "X"
+closeBtn.TextColor3 = Color3.new(1, 1, 1)
+closeBtn.TextScaled = true
+closeBtn.Parent = mainFrame
+
+-- Minimize Button (-) - Hides UI, shows Reopen Button
+local minBtn = Instance.new("TextButton")
+minBtn.Size = UDim2.fromScale(0.13, 0.15)
+minBtn.Position = UDim2.fromScale(0.75, 0.05)
+minBtn.AnchorPoint = Vector2.new(1, 0)
+minBtn.BackgroundColor3 = Color3.fromRGB(200, 150, 50)
+minBtn.Text = "-"
+minBtn.TextColor3 = Color3.new(1, 1, 1)
+minBtn.TextScaled = true
+minBtn.Parent = mainFrame
+
+-- Input: Target Name
+local targetInput = Instance.new("TextBox")
+targetInput.Size = UDim2.fromScale(0.9, 0.26)
+targetInput.Position = UDim2.fromScale(0.5, 0.4)
+targetInput.AnchorPoint = Vector2.new(0.5, 0.5)
+targetInput.PlaceholderText = "Target Name..."
+targetInput.Text = ""
+targetInput.TextScaled = true
+targetInput.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+targetInput.TextColor3 = Color3.new(1, 1, 1)
+targetInput.Parent = mainFrame
+
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.fromScale(0.9, 0.25)
+toggleBtn.Position = UDim2.fromScale(0.5, 0.8)
+toggleBtn.AnchorPoint = Vector2.new(0.5, 0.5)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(1, 255, 1)
+toggleBtn.Text = "START SPAM"
+toggleBtn.TextColor3 = Color3.new(1,1,1)
+toggleBtn.TextScaled = true
+toggleBtn.Parent = mainFrame
+
+-- Reopen Button (Default Position: Top Center)
+local reopenBtn = Instance.new("TextButton")
+reopenBtn.Size = UDim2.fromScale(0.05, 0.1)
+reopenBtn.Position = UDim2.fromScale(0.5, 0.02)
+reopenBtn.AnchorPoint = Vector2.new(0.5, 0)
+reopenBtn.BackgroundColor3 = Color3.fromRGB(1, 1, 1)
+reopenBtn.Text = "💬"
+reopenBtn.TextScaled = true
+reopenBtn.Visible = false
+reopenBtn.Parent = mainGui
+local rstroke = Instance.new("UIStroke")
+rstroke.Parent = reopenBtn
+rstroke.Thickness = 3
+
+-----------------------------------------------------------
+-- 2. INTERACTION & CHAT LOGIC
+-----------------------------------------------------------
+local isRunning = false
+
+-- Provided Text and Symbol Lists
+local spamTexts = {"ladiz hai","kitne baap hai","nothing panel ♥️","guukha","CUD", "mummy cable ride rocket","Gareeb", "server se nikal", "dar gya", "bhaggg","is my son","ye lele   Mount Everest", "nakli", "baccha", "all night party kro iske sath","boomsriiiKa","has blackhole hai","Marja","TEEMLOLI","choco khao",
+	"Behenkelale","tmam kim bombrin","chewtweiya","khoti ganke","rain.bow jat","Chalka",
+	"Genduu","lasunn","my daughter","Miya kudao","can do 1v10 bed time pe","lassi piyega ","Ro","Khtm","Nanga","Noob","mummy ko bhejna","TcccMcccRcccD","okat me","majdur"," teni mam me bomb",}
+local symbols = {"@", "£", "¢", "$", "€", "&", "-", "_", "=", "~", "%", "¥", "₹"}
+local emoji = {
+    "😂", "😭", "💀", "🤣", "🥺",
+    "🔥", "💯", "👏", "🙌", "👑",
+    "✨", "🙏", "💖", "👍", "✌️",
+    "👀", "👅", "🗣️", "🧠", "💪",
+    "🤝", "💖", "🎉", "🚀", "💥",
+    "💀", "🤡", "👹", "👽", "👾",
+    "🤷", "🤦", "🙅", "🙆", "🙋",
+    "🥰", "😍", "🤩", "🥳", "😎",
+    "🤔", "🫣", "🤫", "🫡", "🫠",
+    "🙃", "😬", "🙄", "🤨", "😑",
+    "🤯", "🥵", "🥶", "😱", "😤",
+    "😡", "🤮", "🤡", "💩", "😴"
+}
+
+
+
+-- Dragging Logic
+local function makeDraggable(obj)
+    local dragging, dragStart, startPos
+    obj.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = obj.Position
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStart
+            local screen = mainGui.AbsoluteSize
+            obj.Position = UDim2.new(startPos.X.Scale + (delta.X/screen.X), 0, startPos.Y.Scale + (delta.Y/screen.Y), 0)
+        end
+    end)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+end
+
+makeDraggable(mainFrame)
+makeDraggable(reopenBtn)
+
+-- Button Click Events
+toggleBtn.MouseButton1Click:Connect(function()
+    isRunning = not isRunning
+    toggleBtn.Text = isRunning and "STOP SPAM" or "START SPAM"
+    toggleBtn.BackgroundColor3 = isRunning and Color3.fromRGB(231, 76, 60) or Color3.fromRGB(46, 204, 113)
+end)
+
+minBtn.MouseButton1Click:Connect(function() 
+    mainFrame.Visible = false
+    reopenBtn.Visible = true 
+end)
+
+closeBtn.MouseButton1Click:Connect(function() 
+    isRunning = false
+    mainGui:Destroy() -- Fully removes the GUI
+end)
+
+reopenBtn.MouseButton1Click:Connect(function() 
+    mainFrame.Visible = true
+    reopenBtn.Visible = false 
+end)
+
+---- Chat Execution Loop
+task.spawn(function()
+    local textChannel = TextChatService:WaitForChild("TextChannels"):WaitForChild("RBXGeneral")
+    
+    -- Separate counters for complete independence
+    local symbolCounter = 0
+    local textCounter = 0
+    local emojiCounter = 0
+    while true do
+        if isRunning then
+            -- Independent sequence selection
+            local sIdx = (symbolCounter % #symbols) + 1
+            local tIdx = (textCounter % #spamTexts) + 1
+            local eIdx = (emojiCounter % #emoji) + 1
+
+            local currentSymbol = symbols[sIdx]
+            local currentText = spamTexts[tIdx]
+            local currentEmoji = emoji[eIdx]
+
+            local target = targetInput.Text ~= "" and targetInput.Text or "All"
+            
+            -- Generate 300 symbols
+            local symbolSpam = string.rep(currentSymbol, 125)
+            
+           
+            -- Combine
+            local finalMessage = string.format("%s %s  %s %s %s", symbolSpam, currentEmoji, target, currentText, currentEmoji)
+            
+            -- Attempt to send
+            pcall(function()
+                textChannel:SendAsync(finalMessage)
+            end)
+            
+            -- Increment both counters independently
+            symbolCounter = symbolCounter + 1
+            textCounter = textCounter + 1
+             emojiCounter = emojiCounter + 1
+        end
+        task.wait(1.5)
+    end
+end)
