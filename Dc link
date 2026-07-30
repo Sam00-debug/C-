@@ -4,43 +4,27 @@ local starterGui = game:GetService("StarterGui")
 local inviteCode = "GysbMZrGBd"
 local fullLink = "https://discord.gg/" .. inviteCode
 
--- 1. Copy link to clipboard
-local copied = false
-if typeof(setclipboard) == "function" then
+-- Copy first
+if setclipboard then
     setclipboard(fullLink)
-    copied = true
-elseif typeof(toclipboard) == "function" then
+elseif toclipboard then
     toclipboard(fullLink)
-    copied = true
 end
 
--- 2. Attempt Discord Local RPC call (Prompts desktop Discord app to join)
-local requestFunc = (syn and syn.request) or (http and http.request) or http_request or request
-if requestFunc then
+-- Notify
+game:GetService("StarterGui"):SetCore("SendNotification", {
+    Title = "Discord",
+    Text = " copied! Paste in browser/chrome.",
+    Duration = 5
+})
+
+-- Then try opening (executor-specific)
+if typeof(openurl) == "function" then
     pcall(function()
-        requestFunc({
-            Url = "http://127.0.0.1:6463/rpc?v=1",
-            Method = "POST",
-            Headers = {
-                ["Content-Type"] = "application/json",
-                ["Origin"] = "https://discord.com"
-            },
-            Body = httpService:JSONEncode({
-                cmd = "INVITE_BROWSER",
-                args = {
-                    code = inviteCode
-                },
-                nonce = httpService:GenerateGUID(false)
-            })
-        })
+        openurl(fullLink)
+    end)
+elseif typeof(openUrl) == "function" then
+    pcall(function()
+        openUrl(fullLink)
     end)
 end
-
--- 3. In-Game Notification
-pcall(function()
-    starterGui:SetCore("SendNotification", {
-        Title = "Discord Server",
-        Text = copied and "Link copied to clipboard!" or "Failed to copy link.",
-        Duration = 5
-    })
-end)
