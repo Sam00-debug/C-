@@ -1,0 +1,28 @@
+return {
+    Owner = {
+        nothing_sam00= true
+    },
+
+    Admin = {
+        mob_one0 = true,
+        kausarali2 = true,
+cutie143198 = true 
+       
+    },
+
+    Staff = {
+        charlie = true,
+    },
+
+    VIP = {
+        player1 = true,
+        player2 = true,
+        player3 = true
+    },
+
+    Mod = {
+        harsimran_kaur82 = true,
+XFALCONGAMING7860 = true ,
+h1mx2says
+    }
+}
