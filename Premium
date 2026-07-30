@@ -1,0 +1,480 @@
+-- =======================================================
+-- Secret Place UI - Professional Responsive Dark Theme
+-- Lead UI Update: Mobile/PC Optimized, Tween Animations
+-- =======================================================
+
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local LocalPlayer = Players.LocalPlayer
+
+local guiName = "SecretPlaceUI_Premium"
+
+-- 1. Cleanup Existing UI & Prevent Memory Leaks
+local isUiAlive = true
+local existingGui = pcall(function() return CoreGui:FindFirstChild(guiName) end) and CoreGui:FindFirstChild(guiName) or LocalPlayer.PlayerGui:FindFirstChild(guiName)
+if existingGui then
+    existingGui:Destroy()
+end
+
+local parentUI = pcall(function() return CoreGui.Name end) and CoreGui or LocalPlayer.PlayerGui
+
+-- 2. Theme Configuration (Modern & Unified)
+local Theme = {
+    MainBG = Color3.fromRGB(20, 20, 22),
+    TopBarBG = Color3.fromRGB(28, 28, 32),
+    ElementBG = Color3.fromRGB(35, 35, 40),
+    ButtonBG = Color3.fromRGB(45, 45, 50),
+    ButtonHover = Color3.fromRGB(60, 60, 68),
+    ToggleOff = Color3.fromRGB(50, 50, 55),
+    ToggleOn = Color3.fromRGB(76, 217, 100), -- iOS Green
+    Text = Color3.fromRGB(235, 235, 240),
+    TextDim = Color3.fromRGB(180, 180, 190),
+    Accent = Color3.fromRGB(0, 122, 255),
+    Danger = Color3.fromRGB(255, 69, 58),
+    RadiusMain = UDim.new(0, 10),
+    RadiusInner = UDim.new(0, 6)
+}
+
+-- 3. Tween Helpers
+local function tweenInfo(time)
+    return TweenInfo.new(time, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+end
+
+local function applyHoverAnimation(button, originalColor, hoverColor)
+    button.MouseEnter:Connect(function()
+        TweenService:Create(button, tweenInfo(0.3), {BackgroundColor3 = hoverColor}):Play()
+    end)
+    button.MouseLeave:Connect(function()
+        TweenService:Create(button, tweenInfo(0.3), {BackgroundColor3 = originalColor}):Play()
+    end)
+end
+
+-- ==========================================
+-- UI CONSTRUCTION
+-- ==========================================
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = guiName
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = parentUI
+
+-- Main Window (ClipsDescendants is true for smooth minimizing)
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0.4, 0, 0.7, 0) -- 90% screen width (perfect for mobile)
+MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+MainFrame.BackgroundColor3 = Theme.MainBG
+MainFrame.BorderSizePixel = 0
+MainFrame.ClipsDescendants = true
+MainFrame.Parent = ScreenGui
+
+local MainCorner = Instance.new("UICorner")
+MainCorner.CornerRadius = Theme.RadiusMain
+MainCorner.Parent = MainFrame
+
+local MainStroke = Instance.new("UIStroke")
+MainStroke.Color = Color3.fromRGB(50, 50, 55)
+MainStroke.Thickness = 1
+MainStroke.Parent = MainFrame
+
+-- Size Constraint (Caps size on PC so it isn't gigantic)
+local UIConstraint = Instance.new("UISizeConstraint")
+UIConstraint.MaxSize = Vector2.new(550, 600)
+UIConstraint.MinSize = Vector2.new(300, 45) -- 45 is the exact height of the topbar
+UIConstraint.Parent = MainFrame
+
+-- Top Bar (Fixed Absolute Y Size of 45 pixels)
+local TopBar = Instance.new("Frame")
+TopBar.Name = "TopBar"
+TopBar.Size = UDim2.new(1, 0, 0, 45)
+TopBar.BackgroundColor3 = Theme.TopBarBG
+TopBar.BorderSizePixel = 0
+TopBar.Parent = MainFrame
+
+local TopBarCorner = Instance.new("UICorner")
+TopBarCorner.CornerRadius = Theme.RadiusMain
+TopBarCorner.Parent = TopBar
+
+-- Bottom corner hider for TopBar
+local TopBarFix = Instance.new("Frame")
+TopBarFix.Size = UDim2.new(1, 0, 0, 10)
+TopBarFix.Position = UDim2.new(0, 0, 1, -10)
+TopBarFix.BackgroundColor3 = Theme.TopBarBG
+TopBarFix.BorderSizePixel = 0
+TopBarFix.Parent = TopBar
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -100, 1, 0)
+Title.Position = UDim2.new(0, 15, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "Premium Hub"
+Title.Font = Enum.Font.GothamBold
+Title.TextColor3 = Theme.Text
+Title.TextSize = 16
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = TopBar
+
+-- Window Controls (Minimize & Close)
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 30, 0, 30)
+CloseBtn.Position = UDim2.new(1, -38, 0.5, -15)
+CloseBtn.BackgroundColor3 = Theme.MainBG
+CloseBtn.Text = "✕"
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.TextColor3 = Theme.Danger
+CloseBtn.TextSize = 14
+CloseBtn.Parent = TopBar
+Instance.new("UICorner", CloseBtn).CornerRadius = Theme.RadiusInner
+applyHoverAnimation(CloseBtn, Theme.MainBG, Color3.fromRGB(50, 20, 20))
+
+local MinBtn = Instance.new("TextButton")
+MinBtn.Size = UDim2.new(0, 30, 0, 30)
+MinBtn.Position = UDim2.new(1, -74, 0.5, -15)
+MinBtn.BackgroundColor3 = Theme.MainBG
+MinBtn.Text = "−"
+MinBtn.Font = Enum.Font.GothamBold
+MinBtn.TextColor3 = Theme.Text
+MinBtn.TextSize = 16
+MinBtn.Parent = TopBar
+Instance.new("UICorner", MinBtn).CornerRadius = Theme.RadiusInner
+applyHoverAnimation(MinBtn, Theme.MainBG, Theme.ButtonHover)
+
+-- Scroll Frame
+local ScrollFrame = Instance.new("ScrollingFrame")
+ScrollFrame.Size = UDim2.new(1, -20, 1, -55)
+ScrollFrame.Position = UDim2.new(0, 10, 0, 50)
+ScrollFrame.BackgroundTransparency = 1
+ScrollFrame.BorderSizePixel = 0
+ScrollFrame.ScrollBarThickness = 4
+ScrollFrame.ScrollBarImageColor3 = Theme.TextDim
+ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+ScrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+ScrollFrame.Parent = MainFrame
+
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 8)
+UIListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+UIListLayout.Parent = ScrollFrame
+
+local UIPadding = Instance.new("UIPadding")
+UIPadding.PaddingTop = UDim.new(0, 5)
+UIPadding.PaddingBottom = UDim.new(0, 15)
+UIPadding.Parent = ScrollFrame
+
+-- ==========================================
+-- UI FACTORY FUNCTIONS (Lead UI Standard)
+-- ==========================================
+
+local function createSectionHeader(text)
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(1, -4, 0, 28)
+    Label.BackgroundTransparency = 1
+    Label.Text = string.upper(text)
+    Label.Font = Enum.Font.GothamBold
+    Label.TextColor3 = Theme.TextDim
+    Label.TextSize = 12
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.Parent = ScrollFrame
+end
+
+local function createButton(text, callback)
+    local Btn = Instance.new("TextButton")
+    Btn.Size = UDim2.new(1, -4, 0, 38)
+    Btn.BackgroundColor3 = Theme.ButtonBG
+    Btn.Text = text
+    Btn.Font = Enum.Font.GothamSemibold
+    Btn.TextColor3 = Theme.Text
+    Btn.TextSize = 14
+    Btn.AutoButtonColor = false
+    Btn.Parent = ScrollFrame
+
+    Instance.new("UICorner", Btn).CornerRadius = Theme.RadiusInner
+    applyHoverAnimation(Btn, Theme.ButtonBG, Theme.ButtonHover)
+
+    Btn.MouseButton1Click:Connect(function()
+        -- Click effect
+        local clickTween = TweenService:Create(Btn, tweenInfo(0.1), {Size = UDim2.new(1, -12, 0, 34)})
+        clickTween:Play()
+        clickTween.Completed:Wait()
+        TweenService:Create(Btn, tweenInfo(0.2), {Size = UDim2.new(1, -4, 0, 38)}):Play()
+        callback()
+    end)
+    return Btn
+end
+
+local function createToggle(text, callback)
+    local Frame = Instance.new("Frame")
+    Frame.Size = UDim2.new(1, -4, 0, 42)
+    Frame.BackgroundColor3 = Theme.ElementBG
+    Frame.Parent = ScrollFrame
+    Instance.new("UICorner", Frame).CornerRadius = Theme.RadiusInner
+
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(1, -70, 1, 0)
+    Label.Position = UDim2.new(0, 15, 0, 0)
+    Label.BackgroundTransparency = 1
+    Label.Text = text
+    Label.Font = Enum.Font.GothamSemibold
+    Label.TextColor3 = Theme.Text
+    Label.TextSize = 14
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.Parent = Frame
+
+    -- Professional iOS-style Toggle Switch
+    local SwitchBtn = Instance.new("TextButton")
+    SwitchBtn.Size = UDim2.new(0, 44, 0, 24)
+    SwitchBtn.Position = UDim2.new(1, -55, 0.5, -12)
+    SwitchBtn.BackgroundColor3 = Theme.ToggleOff
+    SwitchBtn.Text = ""
+    SwitchBtn.AutoButtonColor = false
+    SwitchBtn.Parent = Frame
+    Instance.new("UICorner", SwitchBtn).CornerRadius = UDim.new(1, 0)
+
+    local Indicator = Instance.new("Frame")
+    Indicator.Size = UDim2.new(0, 20, 0, 20)
+    Indicator.Position = UDim2.new(0, 2, 0.5, -10)
+    Indicator.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Indicator.Parent = SwitchBtn
+    Instance.new("UICorner", Indicator).CornerRadius = UDim.new(1, 0)
+
+    local isToggled = false
+    SwitchBtn.MouseButton1Click:Connect(function()
+        isToggled = not isToggled
+        local targetColor = isToggled and Theme.ToggleOn or Theme.ToggleOff
+        local targetPos = isToggled and UDim2.new(1, -22, 0.5, -10) or UDim2.new(0, 2, 0.5, -10)
+        
+        TweenService:Create(SwitchBtn, tweenInfo(0.3), {BackgroundColor3 = targetColor}):Play()
+        TweenService:Create(Indicator, tweenInfo(0.3), {Position = targetPos}):Play()
+        
+        callback(isToggled)
+    end)
+end
+
+-- ==========================================
+-- SCRIPT FUNCTIONALITY & LOGIC
+-- ==========================================
+
+createSectionHeader("Main Features")
+
+createToggle("Radioactive Aura ☢️", function(state)
+    local radioactiveActive = state
+
+    if state then
+        local Event = ReplicatedStorage:FindFirstChild("RE") and ReplicatedStorage.RE:FindFirstChild("1Playe1rTrigge1rEven1t")
+        if Event then Event:FireServer("AcceptedToolToServer", "UraniumRod", LocalPlayer) end
+
+        task.spawn(function()
+            while radioactiveActive and isUiAlive do
+                local char = LocalPlayer.Character
+                local hum = char and char:FindFirstChild("Humanoid")
+                local backpack = LocalPlayer:FindFirstChild("Backpack")
+
+                if char and hum and backpack then
+                    local rod = backpack:FindFirstChild("UraniumRod") or backpack:FindFirstChild("Uranium Rod") or char:FindFirstChild("UraniumRod")
+                    if rod then
+                        hum:EquipTool(rod)
+                        task.wait(0.1)
+                        hum:UnequipTools()
+                    end
+                end
+                task.wait(10)
+            end
+        end)
+    end
+end)
+
+createButton("Load Effects Script", function()
+    loadstring(game:HttpGet("https://pastebin.com/raw/fkotHtbm"))()
+end)
+
+-- Effects Section
+createSectionHeader("Particle Modifiers")
+
+local function setupHorizontalEffectCycler(name, dataTable)
+    local currentIndex = 1
+    
+    local Container = Instance.new("Frame")
+    Container.Size = UDim2.new(1, -4, 0, 85) -- More compact and professional
+    Container.BackgroundColor3 = Theme.ElementBG
+    Container.Parent = ScrollFrame
+    Instance.new("UICorner", Container).CornerRadius = Theme.RadiusInner
+
+    local TitleLbl = Instance.new("TextLabel")
+    TitleLbl.Size = UDim2.new(1, -20, 0, 30)
+    TitleLbl.Position = UDim2.new(0, 10, 0, 0)
+    TitleLbl.BackgroundTransparency = 1
+    TitleLbl.Text = name .. " (Current: " .. dataTable[currentIndex].name .. ")"
+    TitleLbl.Font = Enum.Font.GothamSemibold
+    TitleLbl.TextColor3 = Theme.Text
+    TitleLbl.TextSize = 14
+    TitleLbl.TextXAlignment = Enum.TextXAlignment.Left
+    TitleLbl.Parent = Container
+
+    local CycleBtn = Instance.new("TextButton")
+    CycleBtn.Size = UDim2.new(0.45, 0, 0, 35)
+    CycleBtn.Position = UDim2.new(0, 10, 0, 35)
+    CycleBtn.BackgroundColor3 = Theme.ButtonBG
+    CycleBtn.Text = "Cycle Color"
+    CycleBtn.Font = Enum.Font.Gotham
+    CycleBtn.TextColor3 = Theme.Text
+    CycleBtn.TextSize = 13
+    CycleBtn.Parent = Container
+    Instance.new("UICorner", CycleBtn).CornerRadius = Theme.RadiusInner
+    applyHoverAnimation(CycleBtn, Theme.ButtonBG, Theme.ButtonHover)
+
+    local ApplyBtn = Instance.new("TextButton")
+    ApplyBtn.Size = UDim2.new(0.45, 0, 0, 35)
+    ApplyBtn.Position = UDim2.new(0.55, -10, 0, 35)
+    ApplyBtn.BackgroundColor3 = Theme.ToggleOn
+    ApplyBtn.Text = "Apply Effect"
+    ApplyBtn.Font = Enum.Font.GothamBold
+    ApplyBtn.TextColor3 = Color3.fromRGB(20, 50, 20)
+    ApplyBtn.TextSize = 13
+    ApplyBtn.Parent = Container
+    Instance.new("UICorner", ApplyBtn).CornerRadius = Theme.RadiusInner
+    applyHoverAnimation(ApplyBtn, Theme.ToggleOn, Color3.fromRGB(90, 230, 115))
+
+    CycleBtn.MouseButton1Click:Connect(function()
+        currentIndex = (currentIndex % #dataTable) + 1
+        TitleLbl.Text = name .. " (Current: " .. dataTable[currentIndex].name .. ")"
+    end)
+
+    ApplyBtn.MouseButton1Click:Connect(function()
+        local Event = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("ApplyEmmiter")
+        if Event then Event:InvokeServer(dataTable[currentIndex].id, dataTable[currentIndex].arg) end
+    end)
+end
+
+local BubblesData = {
+    {id = "18637500927", arg = "064BubbleRed", name = "Red"},
+    {id = "18637497343", arg = "063BubblePurple", name = "Purple"},
+    {id = "18637499282", arg = "062BubbleBlue", name = "Blue"},
+    {id = "18637493072", arg = "061BubbleGreen", name = "Green"}
+}
+
+local FireData = {
+    {id = "18637074370", arg = "030FireWhite", name = "White"},
+    {id = "18637025451", arg = "031FireOrange", name = "Orange"},
+    {id = "18637078598", arg = "032FireGreen", name = "Green"},
+    {id = "18637076370", arg = "033FireBlue", name = "Blue"},
+    {id = "18637070174", arg = "034FirePurple", name = "Purple"},
+    {id = "18637072603", arg = "035FireBlack", name = "Black"}
+}
+
+setupHorizontalEffectCycler("Smoke Effect", {
+    {id = "18637791748", arg = "080SmokeWhite", name = "White"},
+    {id = "18637813360", arg = "085SmokePurple", name = "Purple"},
+    {id = "18637796598", arg = "086SmokeRed", name = "Red"},
+    {id = "18637798529", arg = "087SmokeBlack", name = "Black"},
+    {id = "18637793920", arg = "082SmokeOrange", name = "Orange"},
+    {id = "18637789299", arg = "083SmokeGreen", name = "Green"}
+})
+setupHorizontalEffectCycler("Bubbles Effect", BubblesData)
+setupHorizontalEffectCycler("Fire Effect", FireData)
+
+-- Tools Section
+createSectionHeader("Item Spawner")
+
+local ToolsMap = {
+    {name = "Glider", type = "AcceptedToolToServer", arg = "Glider"},
+    {name = "Cannon", type = "AcceptedToolToServer", arg = "Cannon"},
+    {name = "Golden Basketball", type = "AcceptedToolToServer", arg = "GoldenBasketball"},
+    {name = "Egg Launcher", type = "AcceptedToolToServer", arg = "EggLauncher"},
+    {name = "Uranium Rod", type = "AcceptedToolToServer", arg = "UraniumRod"},
+    {name = "Chainsaw", type = "AcceptedToolToServer", arg = "Chainsaw"},
+    {name = "Skis", type = "AcceptedToolToServer", arg = "Skis"},
+    {name = "Moneygun", type = "AcceptedToolToServer", arg = "MoneyGun"},
+    {name = "Snowboard", type = "AcceptedToolToServer", arg = "Snowboard"},
+    {name = "Snowball Gun", type = "ToolGiveToServer", arg = "SnowballCannon"},
+    {name = "Crystal", type = "PickingTools", arg = "Crystals"},
+    {name = "Nuclear Barrel", type = "AcceptedToolToServer", arg = "NuclearBarrel"}
+}
+
+for _, tool in ipairs(ToolsMap) do
+    createButton("Spawn " .. tool.name, function()
+        local RE = ReplicatedStorage:FindFirstChild("RE")
+        if tool.type == "AcceptedToolToServer" and RE and RE:FindFirstChild("1Playe1rTrigge1rEven1t") then
+            RE["1Playe1rTrigge1rEven1t"]:FireServer("AcceptedToolToServer", tool.arg, LocalPlayer)
+        elseif tool.type == "ToolGiveToServer" and RE and RE:FindFirstChild("1Playe1rTrigge1rEven1t") then
+            RE["1Playe1rTrigge1rEven1t"]:FireServer("ToolGiveToServer", LocalPlayer, tool.arg)
+        elseif tool.type == "PickingTools" and RE and RE:FindFirstChild("1Too1l") then
+            RE["1Too1l"]:InvokeServer("PickingTools", tool.arg)
+        end
+    end)
+end
+
+-- ==========================================
+-- SMOOTH DRAGGING (Mobile + PC Supported)
+-- ==========================================
+
+local dragging, dragInput, dragStart, startPos
+
+local function updateInput(input)
+    local delta = input.Position - dragStart
+    -- Using TweenService to make dragging ultra smooth
+    TweenService:Create(MainFrame, TweenInfo.new(0.05, Enum.EasingStyle.Linear), {
+        Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    }):Play()
+end
+
+TopBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+TopBar.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        updateInput(input)
+    end
+end)
+
+-- ==========================================
+-- MINIMIZE & CLOSE LOGIC (Animated)
+-- ==========================================
+
+CloseBtn.MouseButton1Click:Connect(function()
+    isUiAlive = false -- Stops background loops
+    local fadeOut = TweenService:Create(MainFrame, tweenInfo(0.3), {Size = UDim2.new(0,0,0,0)})
+    fadeOut:Play()
+    fadeOut.Completed:Wait()
+    ScreenGui:Destroy()
+end)
+
+local minimized = false
+local previousSize = MainFrame.Size
+
+MinBtn.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    
+    if minimized then
+        previousSize = MainFrame.Size
+        -- Smoothly scales height down to TopBar exactly
+        TweenService:Create(MainFrame, tweenInfo(0.4), {Size = UDim2.new(previousSize.X.Scale, previousSize.X.Offset, 0, 45)}):Play()
+        MinBtn.Text = "+"
+    else
+        -- Restores seamlessly
+        TweenService:Create(MainFrame, tweenInfo(0.4), {Size = previousSize}):Play()
+        MinBtn.Text = "−"
+    end
+end)
