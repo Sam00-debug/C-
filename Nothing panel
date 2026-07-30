@@ -1,6 +1,4 @@
-loadstring(game:HttpGet("https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Script"))()
 
-loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
 
 
 
@@ -52,7 +50,7 @@ task.spawn(function()
     pcall(function()
         local textChannel = TextChatService:WaitForChild("TextChannels", 10):WaitForChild("RBXGeneral", 10)
         if textChannel then
-            textChannel:SendAsync("______________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________________system:- Nothing Panel executed...")
+            textChannel:SendAsync("______________________________________________________system:- Nothing Panel executed...")
         end
     end)
 end)
@@ -363,6 +361,8 @@ local buttonsData =
 
 {"informationℹ️","https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Information"},
     
+{"Chat💬",{"https://raw.githubusercontent.com/Sam00-debug/Nothing-chat-/refs/heads/main/Script"}},
+{"infinite yield 💤","https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"},
     {"prop🎁","https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Prop%20script"},
     {"mecha🤖","https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Mecha%20robot"},
     {"avatars👤","https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Avatars"},
@@ -376,9 +376,13 @@ local buttonsData =
     {"antibang🛡️","https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Antibang"},
     {"op bang💥","https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Op%20bang"},
     {"fake hover board🛹","https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Fake%20hover%20board"},
-    {"simple hacks⚡","https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Simple%20hacks"},
+{ "simple hacks⚡",{
+        "https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Simple%20hacks",
+        "https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"
+    }
+},
     {"spammer📢","https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Spammer"},
-    {"chat💬","https://raw.githubusercontent.com/Sam00-debug/Nothing-chat/refs/heads/main/Dc%20link"}
+    {"Discord ","https://raw.githubusercontent.com/Sam00-debug/Nothing-chat/refs/heads/main/Dc%20link"}
     }
 
 
@@ -398,17 +402,18 @@ for _, data in ipairs(buttonsData) do
     Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 6)
     
     Btn.MouseButton1Click:Connect(function()
-        PlayClick()
-        TweenService:Create(Btn, TweenInfo.new(0.1), {BackgroundColor3 = Color3.fromRGB(60, 60, 75)}):Play()
-        
+    PlayClick()
+
+    local urls = type(data[2]) == "table" and data[2] or {data[2]}
+
+    for _, url in ipairs(urls) do
         task.spawn(function()
-            pcall(function() loadstring(game:HttpGet(data[2]))() end)
+            pcall(function()
+                loadstring(game:HttpGet(url))()
+            end)
         end)
-        
-        task.wait(0.1)
-        TweenService:Create(Btn, TweenInfo.new(0.1), {BackgroundColor3 = Color3.fromRGB(45, 45, 55)}):Play()
-    end)
-end
+    end
+end)
 
 --=========================================
 -- 8. GLOBAL BUTTON SOUNDS & LOGIC
