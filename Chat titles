@@ -1,28 +1,40 @@
 return {
-    Owner = {
-        nothing_sam00= true
-    },
 
+    Owner = {
+        nothing_sam00 = true
+    },
     Admin = {
-        mob_one0 = true,
         kausarali2 = true,
-cutie143198 = true 
-       
+        cutie143198 = true,
+        mob_one0 = false
     },
 
     Staff = {
-        charlie = true,
+        Baapxxx = true
+         
     },
 
     VIP = {
-        player1 = true,
-        player2 = true,
-        player3 = true
-    },
+        
+        om10755 = true,
+        s1r_marco = true ,
+         satyamissatyam = true ,
+       devilfruitking90 = true ,
+        you_cantxdoanything = true,
+        mikey_tokyoboss0 = true,
+        yutaxlightgojo = true ,
+ arup_royalchallenger = true,
+Mob_one0 = true ,
+chinmay9620 = true ,
+JT_Hero11 = true,
+N0T_Z0RO100 = true ,
+Curs3dhim = true 
+    }, 
 
     Mod = {
-        harsimran_kaur82 = true,
-XFALCONGAMING7860 = true ,
-h1mx2says
+        
+xfalcongaming7860 = true,
+harsimran_kaur82 = true,
+        h1mx2says = true
     }
 }
