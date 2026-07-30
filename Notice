@@ -1,0 +1,160 @@
+-- // Variables
+local Players = game:GetService("Players")
+local CoreGui = game:GetService("CoreGui")
+local UserInputService = game:GetService("UserInputService")
+
+local discordLink = "https://discord.gg/GysbMZrGBd"
+
+-- // ScreenGui Setup
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "NoticeGUI"
+ScreenGui.ResetOnSpawn = false
+-- Protect GUI from being easily seen in standard PlayerGui if using an executor
+local success = pcall(function()
+	ScreenGui.Parent = CoreGui
+end)
+if not success then
+	ScreenGui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+end
+
+-- // Main Frame (400x400)
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 400, 0, 300)
+MainFrame.Position = UDim2.new(0.5, -200, 0.5, -200) -- Centered
+MainFrame.BackgroundColor3 = Color3.fromRGB(1, 1, 1) -- Very dark grey so the black stroke is visible
+MainFrame.BorderSizePixel = 0
+MainFrame.Parent = ScreenGui
+
+-- // Black UIStroke
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Color = Color3.fromRGB(0, 0, 0)
+UIStroke.Thickness = 3
+UIStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+UIStroke.Parent = MainFrame
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 8)
+UICorner.Parent = MainFrame
+
+-- // Big Title - ☢️ Notice
+local Title = Instance.new("TextLabel")
+Title.Name = "Title"
+Title.Size = UDim2.new(1, -40, 0, 60)
+Title.Position = UDim2.new(0, 20, 0, 10)
+Title.BackgroundTransparency = 1
+Title.Text = "☢️ Notice"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 35
+Title.Font = Enum.Font.GothamBold
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = MainFrame
+
+-- // Close Button
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Name = "CloseBtn"
+CloseBtn.Size = UDim2.new(0, 40, 0, 40)
+CloseBtn.Position = UDim2.new(1, -50, 0, 20)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseBtn.TextSize = 20
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.Parent = MainFrame
+
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(0, 6)
+CloseCorner.Parent = CloseBtn
+
+-- // Main Paragraph
+local Paragraph = Instance.new("TextLabel")
+Paragraph.Name = "Paragraph"
+Paragraph.Size = UDim2.new(1, -40, 0, 200)
+Paragraph.Position = UDim2.new(0, 20, 0, 90)
+Paragraph.BackgroundTransparency = 1
+Paragraph.Text = "yesterday, pastebin platform where nothing panel source code was stored went under maintenance and we are not able to access our code , so we gonna rebuild until pastebin fix technical issues."
+Paragraph.TextColor3 = Color3.fromRGB(255, 255, 255)
+Paragraph.TextSize = 20
+Paragraph.Font = Enum.Font.GothamSemibold
+Paragraph.TextWrapped = true
+Paragraph.TextXAlignment = Enum.TextXAlignment.Left
+Paragraph.TextYAlignment = Enum.TextYAlignment.Top
+Paragraph.Parent = MainFrame
+
+-- // Discord Link Button
+local DiscordBtn = Instance.new("TextButton")
+DiscordBtn.Name = "DiscordBtn"
+DiscordBtn.Size = UDim2.new(1, -40, 0, 50)
+DiscordBtn.Position = UDim2.new(0, 20, 1, -30)
+DiscordBtn.BackgroundColor3 = Color3.fromRGB(88, 101, 242) -- Discord Blurple
+DiscordBtn.Text = "🔗 " .. discordLink .. "\n(Click to Copy)"
+DiscordBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+DiscordBtn.TextSize = 16
+DiscordBtn.Font = Enum.Font.GothamBold
+DiscordBtn.Parent = MainFrame
+
+local DiscordCorner = Instance.new("UICorner")
+DiscordCorner.CornerRadius = UDim.new(0, 6)
+DiscordCorner.Parent = DiscordBtn
+
+-- // Functionality: Close UI
+CloseBtn.MouseButton1Click:Connect(function()
+	ScreenGui:Destroy()
+end)
+
+-- // Functionality: Discord Button Copy
+DiscordBtn.MouseButton1Click:Connect(function()
+	if setclipboard then
+		setclipboard(discordLink)
+		DiscordBtn.Text = "✅ Copied to Clipboard!\nPaste in browser to join."
+		DiscordBtn.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+		
+		task.wait(2.5)
+		DiscordBtn.Text = "🔗 " .. discordLink .. "\n(Click to Copy)"
+		DiscordBtn.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
+	else
+		DiscordBtn.Text = "⚠️ Executor doesn't support clipboard copying"
+	end
+end)
+
+-- // Functionality: Custom Smooth Dragging
+local dragging
+local dragInput
+local dragStart
+local startPos
+
+local function update(input)
+	local delta = input.Position - dragStart
+	MainFrame.Position = UDim2.new(
+        startPos.X.Scale, 
+        startPos.X.Offset + delta.X, 
+        startPos.Y.Scale, 
+        startPos.Y.Offset + delta.Y
+    )
+end
+
+MainFrame.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPos = MainFrame.Position
+
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
+	end
+end)
+
+MainFrame.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+		dragInput = input
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if input == dragInput and dragging then
+		update(input)
+	end
+end)
