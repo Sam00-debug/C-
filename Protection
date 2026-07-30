@@ -1,0 +1,538 @@
+-- ==========================================
+-- PROTECTION PANEL
+-- ==========================================
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local TextChatService = game:GetService("TextChatService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CoreGui = game:GetService("CoreGui")
+
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local humanoid = character:WaitForChild("Humanoid")
+
+-- Update character reference on respawn
+player.CharacterAdded:Connect(function(newChar)
+    character = newChar
+    humanoid = character:WaitForChild("Humanoid")
+end)
+
+-- ==========================================
+-- CHAT MESSAGE HANDLER
+-- ==========================================
+local function SendChatMessage(msg)
+    if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+        local channel = TextChatService.TextChannels:FindFirstChild("RBXGeneral")
+        if channel then
+            channel:SendAsync(msg)
+        end
+    else
+        local defaultChat = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents")
+        if defaultChat and defaultChat:FindFirstChild("SayMessageRequest") then
+            defaultChat.SayMessageRequest:FireServer(msg, "All")
+        end
+    end
+end
+
+-- ==========================================
+-- INITIAL EXECUTION TELEPORT
+-- ==========================================
+if character and character:FindFirstChild("HumanoidRootPart") then
+    character.HumanoidRootPart.CFrame = CFrame.new(200, 20, 200)
+end
+
+-- ==========================================
+-- STATE MANAGEMENT
+-- ==========================================
+_G.ProtectionPanelState = _G.ProtectionPanelState or {
+    ["No Sit"] = false,
+    ["No Clip"] = false,
+    ["Anti Bang"] = false,
+    ["Anti Prop Troll"] = false,
+    ["Anti Ball Fling"] = false,
+    ["Anti Bus Fling"] = false,
+    ["Anti Boat Fling"] = false,
+    ["Anti Jet Fling"] = false,
+    ["Anti ball fling"] = false,
+    ["Anti door fling"] = false,
+    ["anti bus fling"] = false,
+    
+    ["Anti Kill"] = false,
+    ["Anti Void"] = false,
+    ["Anti Fling"] = false,
+    ["Anti Lose"] = false,
+    ["Anti Cart"] = false,
+    ["Anti Chair"] = false,
+    ["Anti Car Troll"] = false,
+    ["Anti Troll"] = false,
+}
+
+local Toggles = _G.ProtectionPanelState
+
+local guiName = "ProProtectionPanel"
+if CoreGui:FindFirstChild(guiName) then
+    CoreGui[guiName]:Destroy()
+elseif player.PlayerGui:FindFirstChild(guiName) then
+    player.PlayerGui[guiName]:Destroy()
+end
+
+-- ==========================================
+-- BROOKHAVEN HELPERS & MACROS
+-- ==========================================
+local manualPositions = {
+    Vector3.new(288, 5, 209), Vector3.new(257, 5, 278), Vector3.new(288, 22, 209), Vector3.new(257, 22, 278),
+    Vector3.new(-21, 35, 445), Vector3.new(151, 36, 459), Vector3.new(234, 37, 463), Vector3.new(255, 35, 373),
+    Vector3.new(146, 35, 371), Vector3.new(-21, 35, 366), Vector3.new(-191, 35, -232), Vector3.new(-351, 35, -229),
+    Vector3.new(-456, 35, -224), Vector3.new(-453, 35, -318), Vector3.new(-356, 35, -313), Vector3.new(-194, 35, -313),
+    Vector3.new(-424, 68, -446), Vector3.new(-353, 68, -510), Vector3.new(-38, 10, 2240),
+    Vector3.new(-66, 84, -411), Vector3.new(190, 51, 569),
+    Vector3.new(-7, 20, -143), Vector3.new(-7, 36, -143)
+}
+
+local function getPlayerHouse()
+    local lots = workspace:FindFirstChild("001_Lots")
+    if not lots then return nil end
+    local house = lots:FindFirstChild(player.Name .. "House") or lots:FindFirstChild(player.Name .. " House")
+    if house and house:FindFirstChild("HousePickedByPlayer") and house.HousePickedByPlayer:FindFirstChild("HouseModel") then
+        return house
+    end
+    return nil
+end
+
+local function getClosestManualPosition(houseFolder)
+    local samplePart = houseFolder:FindFirstChildWhichIsA("BasePart", true)
+    if not samplePart then return manualPositions[1] end
+    local samplePos = samplePart.Position
+    local closestPos = manualPositions[1]
+    local minDistance = math.huge
+    for _, pos in ipairs(manualPositions) do
+        local dist = (samplePos - pos).Magnitude
+        if dist < minDistance then
+            minDistance = dist
+            closestPos = pos
+        end
+    end
+    return closestPos
+end
+
+local isMacroActive = false
+
+local function executeHouseMacro(actionType)
+    if isMacroActive or not character:FindFirstChild("HumanoidRootPart") then return end
+    local houseFolder = getPlayerHouse()
+    if not houseFolder then return end 
+    
+    isMacroActive = true
+    local rootPart = character.HumanoidRootPart
+    local originalCFrame = rootPart.CFrame
+    
+    local targetPosition = getClosestManualPosition(houseFolder)
+    rootPart.CFrame = CFrame.new(targetPosition + Vector3.new(0, 2, 0))
+    task.wait(1)
+
+    local houseModel = houseFolder.HousePickedByPlayer.HouseModel
+    local clearPropsRemote = houseModel:FindFirstChild("Permissions:ClearProps")
+    local disallowRemote = houseModel:FindFirstChild("Permissions:Disallow")
+
+    if actionType == "Prop" or actionType == "Both" then
+        if clearPropsRemote then pcall(function() clearPropsRemote:InvokeServer() end) end
+    end
+    if actionType == "Bang" or actionType == "Both" then
+        if disallowRemote then
+            for _, target in pairs(Players:GetPlayers()) do
+                if target ~= player then pcall(function() disallowRemote:FireServer(target) end) end
+            end
+        end
+    end
+
+    task.wait(0.2)
+    rootPart.CFrame = originalCFrame
+    isMacroActive = false
+end
+
+-- ==========================================
+-- REMOTE HOOK (PropMaker Anti-Bang)
+-- ==========================================
+if hookmetamethod and not _G.PropBoxHookLoaded then
+    _G.PropBoxHookLoaded = true
+    local oldNamecall
+    oldNamecall = hookmetamethod(game, "__namecall", function(self, ...)
+        local method = getnamecallmethod()
+        local args = {...}
+        
+        -- Detect the exact remote call for deselecting PropMaker
+        if not checkcaller() and method == "InvokeServer" and self.Name == "1Too1l" then
+            if type(args[1]) == "string" and args[1] == "PickingTools" and type(args[2]) == "string" and args[2] == "PropMaker" then
+                -- Triggers Anti-Bang Logic
+                task.spawn(executeHouseMacro, "Bang")
+            end
+        end
+        
+        return oldNamecall(self, ...)
+    end)
+end
+
+-- ==========================================
+-- UI CREATION
+-- ==========================================
+local targetGuiParent = pcall(function() return CoreGui.Name end) and CoreGui or player.PlayerGui
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = guiName
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = targetGuiParent
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 300, 0, 320) -- Slightly taller to fit the notice comfortably
+MainFrame.Position = UDim2.new(0.5, -150, 0.5, -160)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 8)
+UICorner.Parent = MainFrame
+
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Color = Color3.fromRGB(0, 0, 0)
+UIStroke.Thickness = 2
+UIStroke.Transparency = 0.4
+UIStroke.Parent = MainFrame
+
+local SizeConstraint = Instance.new("UISizeConstraint")
+SizeConstraint.MaxSize = Vector2.new(300, 320)
+SizeConstraint.MinSize = Vector2.new(0, 0)
+SizeConstraint.Parent = MainFrame
+
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Name = "Title"
+TitleLabel.Size = UDim2.new(1, -50, 0, 40)
+TitleLabel.Position = UDim2.new(0, 15, 0, 5)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text = "Protection"
+TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleLabel.Font = Enum.Font.GothamBold
+TitleLabel.TextSize = 20
+TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+TitleLabel.Parent = MainFrame
+
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Name = "CloseButton"
+CloseBtn.Size = UDim2.new(0, 30, 0, 30)
+CloseBtn.Position = UDim2.new(1, -40, 0, 10)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+CloseBtn.Text = "o"
+CloseBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+CloseBtn.Font = Enum.Font.GothamMedium
+CloseBtn.TextSize = 22
+CloseBtn.AutoButtonColor = false
+CloseBtn.Parent = MainFrame
+
+CloseBtn.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
+
+local ScrollFrame = Instance.new("ScrollingFrame")
+ScrollFrame.Name = "ScrollFrame"
+-- Leave space for the notice frame below
+ScrollFrame.Size = UDim2.new(1, -20, 1, -95) 
+ScrollFrame.Position = UDim2.new(0, 10, 0, 50)
+ScrollFrame.BackgroundTransparency = 1
+ScrollFrame.ScrollBarThickness = 4
+ScrollFrame.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 80)
+ScrollFrame.Parent = MainFrame
+
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.Padding = UDim.new(0, 8)
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Parent = ScrollFrame
+
+local UIPadding = Instance.new("UIPadding")
+UIPadding.PaddingLeft = UDim.new(0, 5)
+UIPadding.PaddingRight = UDim.new(0, 5)
+UIPadding.PaddingTop = UDim.new(0, 5)
+UIPadding.Parent = ScrollFrame
+
+-- ==========================================
+-- HIGHLIGHTED NOTICE BAR
+-- ==========================================
+local NoticeFrame = Instance.new("Frame")
+NoticeFrame.Name = "NoticeFrame"
+NoticeFrame.Size = UDim2.new(1, -20, 0, 30)
+NoticeFrame.Position = UDim2.new(0, 10, 1, -40)
+NoticeFrame.BackgroundColor3 = Color3.fromRGB(45, 35, 10)
+NoticeFrame.Parent = MainFrame
+
+local NoticeCorner = Instance.new("UICorner")
+NoticeCorner.CornerRadius = UDim.new(0, 6)
+NoticeCorner.Parent = NoticeFrame
+
+local NoticeStroke = Instance.new("UIStroke")
+NoticeStroke.Color = Color3.fromRGB(220, 160, 0)
+NoticeStroke.Thickness = 1
+NoticeStroke.Parent = NoticeFrame
+
+local NoticeText = Instance.new("TextLabel")
+NoticeText.Size = UDim2.new(1, -10, 1, 0)
+NoticeText.Position = UDim2.new(0, 5, 0, 0)
+NoticeText.BackgroundTransparency = 1
+NoticeText.Text = "⚠️ Select/unselect PropBox to delete trolling props"
+NoticeText.TextColor3 = Color3.fromRGB(255, 210, 80)
+NoticeText.Font = Enum.Font.GothamMedium
+NoticeText.TextSize = 12
+NoticeText.TextWrapped = true
+NoticeText.Parent = NoticeFrame
+
+-- ==========================================
+-- TOGGLE COMPONENT FACTORY
+-- ==========================================
+local function CreateToggle(name, order)
+    local Frame = Instance.new("Frame")
+    Frame.Size = UDim2.new(1, 0, 0, 40)
+    Frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    Frame.LayoutOrder = order
+    Frame.Parent = ScrollFrame
+
+    local FrameCorner = Instance.new("UICorner")
+    FrameCorner.CornerRadius = UDim.new(0, 6)
+    FrameCorner.Parent = Frame
+
+    local TextLabel = Instance.new("TextLabel")
+    TextLabel.Size = UDim2.new(0.65, 0, 1, 0)
+    TextLabel.Position = UDim2.new(0, 10, 0, 0)
+    TextLabel.BackgroundTransparency = 1
+    TextLabel.Text = name
+    TextLabel.TextColor3 = Color3.fromRGB(220, 220, 220)
+    TextLabel.Font = Enum.Font.GothamMedium
+    TextLabel.TextSize = 13
+    TextLabel.TextXAlignment = Enum.TextXAlignment.Left
+    TextLabel.Parent = Frame
+
+    local ToggleBtn = Instance.new("TextButton")
+    ToggleBtn.Size = UDim2.new(0, 40, 0, 20)
+    ToggleBtn.Position = UDim2.new(1, -50, 0.5, -10)
+    ToggleBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+    ToggleBtn.Text = ""
+    ToggleBtn.AutoButtonColor = false
+    ToggleBtn.Parent = Frame
+
+    local ToggleCorner = Instance.new("UICorner")
+    ToggleCorner.CornerRadius = UDim.new(1, 0)
+    ToggleCorner.Parent = ToggleBtn
+
+    local Circle = Instance.new("Frame")
+    Circle.Size = UDim2.new(0, 16, 0, 16)
+    Circle.Position = UDim2.new(0, 2, 0.5, -8)
+    Circle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Circle.Parent = ToggleBtn
+
+    local CircleCorner = Instance.new("UICorner")
+    CircleCorner.CornerRadius = UDim.new(1, 0)
+    CircleCorner.Parent = Circle
+
+    local function UpdateVisuals()
+        local isOn = Toggles[name]
+        local targetColor = isOn and Color3.fromRGB(45, 200, 95) or Color3.fromRGB(70, 70, 70)
+        local targetPos = isOn and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)
+        
+        TweenService:Create(ToggleBtn, TweenInfo.new(0.25), {BackgroundColor3 = targetColor}):Play()
+        TweenService:Create(Circle, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = targetPos}):Play()
+    end
+
+    UpdateVisuals()
+
+    ToggleBtn.MouseButton1Click:Connect(function()
+        Toggles[name] = not Toggles[name]
+        UpdateVisuals()
+        
+        -- Send Chat commands for No Sit & No Clip
+        if name == "No Sit" then
+            if Toggles[name] then SendChatMessage(";nosit") else SendChatMessage(";unnosit") end
+        elseif name == "No Clip" then
+            if Toggles[name] then SendChatMessage(";noclip") else SendChatMessage(";unnoclip") end
+        end
+    end)
+end
+
+local buttonList = {
+    "No Sit", "No Clip", "Anti Bang", "Anti Prop Troll", 
+    "Anti Ball Fling", "Anti Bus Fling", "Anti Boat Fling", "Anti Jet Fling",
+    "No Col - SoccerBall", "No Col - Door", "No Col - Vehicles",
+    "Anti Kill", "Anti Void", "Anti Fling", "Anti Lose", "Anti Cart", "Anti Chair", "Anti Car Troll", "Anti Troll"
+}
+
+for i, btnName in ipairs(buttonList) do
+    CreateToggle(btnName, i)
+end
+ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, (#buttonList * 48) + 10)
+
+-- ==========================================
+-- NO HOUSE RED OVERLAY LOCK
+-- ==========================================
+local LockOverlay = Instance.new("Frame")
+LockOverlay.Name = "LockOverlay"
+LockOverlay.Size = UDim2.new(1, 0, 1, 0)
+LockOverlay.BackgroundColor3 = Color3.fromRGB(150, 20, 20)
+LockOverlay.BackgroundTransparency = 0.3
+LockOverlay.Visible = false
+LockOverlay.ZIndex = 10
+LockOverlay.Parent = MainFrame
+
+local LockCorner = Instance.new("UICorner")
+LockCorner.CornerRadius = UDim.new(0, 8)
+LockCorner.Parent = LockOverlay
+
+local SpawnBtn = Instance.new("TextButton")
+SpawnBtn.Size = UDim2.new(0, 180, 0, 45)
+SpawnBtn.Position = UDim2.new(0.5, -90, 0.5, -22.5)
+SpawnBtn.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+SpawnBtn.Text = "Spawn a house"
+SpawnBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+SpawnBtn.Font = Enum.Font.GothamBold
+SpawnBtn.TextSize = 16
+SpawnBtn.ZIndex = 11
+SpawnBtn.Parent = LockOverlay
+
+local SpawnCorner = Instance.new("UICorner")
+SpawnCorner.CornerRadius = UDim.new(0, 8)
+SpawnCorner.Parent = SpawnBtn
+
+SpawnBtn.MouseButton1Click:Connect(function()
+    if character and character:FindFirstChild("HumanoidRootPart") then
+        character.HumanoidRootPart.CFrame = CFrame.new(200, 20, 200)
+    end
+end)
+
+-- ==========================================
+-- EFFICIENT GLOBAL COLLISION DISABLER
+-- ==========================================
+local function DeepDisableCollision(model)
+    for _, part in ipairs(model:GetDescendants()) do
+        if part:IsA("BasePart") and part.CanCollide then
+            part.CanCollide = false
+        end
+    end
+end
+
+-- ==========================================
+-- BACKGROUND LOGIC LOOP
+-- ==========================================
+if _G.ProtectionLogicConnection then _G.ProtectionLogicConnection:Disconnect() end
+
+local timeElapsed = 0
+
+_G.ProtectionLogicConnection = RunService.Heartbeat:Connect(function(deltaTime)
+    timeElapsed += deltaTime
+
+    if LockOverlay then LockOverlay.Visible = getPlayerHouse() == nil end
+
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+    local hrp = character.HumanoidRootPart
+
+    -- No Sit Logic
+    if Toggles["No Sit"] and humanoid.Sit then humanoid.Sit = false end
+
+    -- No Clip Logic
+    if Toggles["No Clip"] then
+        for _, part in ipairs(character:GetDescendants()) do
+            if part:IsA("BasePart") and part.CanCollide then part.CanCollide = false end
+        end
+    end
+
+    -- Region-based Collision filters for misc objects (Carts, Chairs)
+    local activeMiscTags = {}
+    if Toggles["Anti Cart"] then table.insert(activeMiscTags, "cart") end
+    if Toggles["Anti Chair"] then table.insert(activeMiscTags, "chair") end
+
+    if #activeMiscTags > 0 then
+        local region = Region3.new(hrp.Position - Vector3.new(20,20,20), hrp.Position + Vector3.new(20,20,20))
+        local partsInRegion = workspace:FindPartsInRegion3(region, character, 50)
+        for _, part in ipairs(partsInRegion) do
+            local name = string.lower(part.Name)
+            for _, tag in ipairs(activeMiscTags) do
+                if string.find(name, tag) then
+                    part.CanCollide = false
+                end
+            end
+        end
+    end
+
+    -- 1-Second Interval Heavy Logic
+    if timeElapsed >= 1 then
+        timeElapsed = 0
+
+        -- 1. GLOBAL COLLISION REMOVER (Vehicles, Doors, Soccerballs)
+        if Toggles["No Col - Vehicles"] or Toggles["Anti Car Troll"] or Toggles["Anti Bus Fling"] or Toggles["Anti Boat Fling"] or Toggles["Anti Jet Fling"] then
+            local vehicles = workspace:FindFirstChild("Vehicles")
+            if vehicles then DeepDisableCollision(vehicles) end
+        end
+
+        if Toggles["No Col - Door"] then
+            local lots = workspace:FindFirstChild("001_Lots")
+            if lots then
+                for _, descendant in ipairs(lots:GetChildren()) do
+                    -- Looks for door models within all house plots
+                    for _, doorMatch in ipairs(descendant:GetDescendants()) do
+                        if string.find(string.lower(doorMatch.Name), "door") then
+                            DeepDisableCollision(doorMatch)
+                        end
+                    end
+                end
+            end
+        end
+
+        if Toggles["No Col - SoccerBall"] or Toggles["Anti Ball Fling"] then
+            for _, obj in ipairs(workspace:GetChildren()) do
+                if string.find(string.lower(obj.Name), "ball") then
+                    DeepDisableCollision(obj)
+                end
+            end
+        end
+
+        -- 2. Anti Bang (Physical proximity check)
+        if Toggles["Anti Bang"] and not isMacroActive then
+            local triggerBang = false
+            for _, p in ipairs(Players:GetPlayers()) do
+                if p ~= player and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+                    local targetHRP = p.Character.HumanoidRootPart
+                    local dist = (targetHRP.Position - hrp.Position).Magnitude
+                    if dist < 3.5 then
+                        triggerBang = true
+                        break
+                    end
+                end
+            end
+            if triggerBang then
+                task.spawn(executeHouseMacro, "Bang")
+            end
+        end
+
+        -- 3. Anti Prop Troll (Prop proximity check -> executes Antibang logic)
+        if Toggles["Anti Prop Troll"] and not isMacroActive then
+            local triggerProp = false
+            local region = Region3.new(hrp.Position - Vector3.new(8,8,8), hrp.Position + Vector3.new(8,8,8))
+            local nearbyParts = workspace:FindPartsInRegion3(region, character, 50)
+            
+            for _, part in ipairs(nearbyParts) do
+                if part.Name == "Touch" and part.Parent then
+                    local parentName = part.Parent.Name
+                    -- Match format Prop(Username)
+                    if string.match(parentName, "^Prop%(") then
+                        -- Exception: Ignore user's own props
+                        if parentName ~= "Prop(" .. player.Name .. ")" then
+                            triggerProp = true
+                            break
+                        end
+                    end
+                end
+            end
+            
+            if triggerProp then
+                task.spawn(executeHouseMacro, "Both")
+            end
+        end
+    end
+end)
