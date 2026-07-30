@@ -1,0 +1,208 @@
+-- Services
+local Players = game:GetService("Players")
+local TeleportService = game:GetService("TeleportService")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+
+-- ScreenGui Setup
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "ServerJoinerGui"
+ScreenGui.ResetOnSpawn = false
+-- If using an executor, change the parent to game.CoreGui
+ScreenGui.Parent = player:WaitForChild("PlayerGui") 
+
+-- Main Frame (300, 400)
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 300, 0, 300)
+MainFrame.Position = UDim2.new(0.5, -150, 0.5, -200)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20) -- Slightly off-black so stroke is visible
+MainFrame.BorderSizePixel = 0
+MainFrame.Parent = ScreenGui
+
+-- Black UI Stroke
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Color = Color3.fromRGB(0, 0, 0)
+UIStroke.Thickness = 3
+UIStroke.Parent = MainFrame
+
+local UICorner_Main = Instance.new("UICorner")
+UICorner_Main.CornerRadius = UDim.new(0, 8)
+UICorner_Main.Parent = MainFrame
+
+-- Title
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -50, 0, 40)
+Title.Position = UDim2.new(0, 15, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "Join Server"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 18
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = MainFrame
+
+-- Close Button
+local CloseBtn = Instance.new("TextButton")
+CloseBtn.Size = UDim2.new(0, 40, 0, 40)
+CloseBtn.Position = UDim2.new(1, -40, 0, 0)
+CloseBtn.BackgroundTransparency = 1
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.fromRGB(200, 50, 50)
+CloseBtn.Font = Enum.Font.GothamBold
+CloseBtn.TextSize = 18
+CloseBtn.Parent = MainFrame
+
+-- Separator Line
+local Line = Instance.new("Frame")
+Line.Size = UDim2.new(1, 0, 0, 1)
+Line.Position = UDim2.new(0, 0, 0, 40)
+Line.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+Line.BorderSizePixel = 0
+Line.Parent = MainFrame
+
+-- SECTION 1 (Join Server)
+local Section1 = Instance.new("Frame")
+Section1.Size = UDim2.new(1, -30, 0, 140)
+Section1.Position = UDim2.new(0, 15, 0, 60)
+Section1.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+Section1.Parent = MainFrame
+
+local UICorner_S1 = Instance.new("UICorner")
+UICorner_S1.CornerRadius = UDim.new(0, 6)
+UICorner_S1.Parent = Section1
+
+local ServerInput = Instance.new("TextBox")
+ServerInput.Size = UDim2.new(1, -20, 0, 40)
+ServerInput.Position = UDim2.new(0, 10, 0, 15)
+ServerInput.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+ServerInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+ServerInput.PlaceholderText = "Paste Server ID (JobId)"
+ServerInput.Font = Enum.Font.Gotham
+ServerInput.TextSize = 14
+ServerInput.Text = ""
+ServerInput.ClearTextOnFocus = false
+ServerInput.Parent = Section1
+
+local JoinBtn = Instance.new("TextButton")
+JoinBtn.Size = UDim2.new(1, -20, 0, 45)
+JoinBtn.Position = UDim2.new(0, 10, 0, 75)
+JoinBtn.BackgroundColor3 = Color3.fromRGB(40, 150, 60)
+JoinBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+JoinBtn.Text = "Join Server"
+JoinBtn.Font = Enum.Font.GothamBold
+JoinBtn.TextSize = 16
+JoinBtn.Parent = Section1
+
+local UICorner_JoinBtn = Instance.new("UICorner")
+UICorner_JoinBtn.CornerRadius = UDim.new(0, 6)
+UICorner_JoinBtn.Parent = JoinBtn
+
+-- SECTION 2 (Copy Server ID)
+local Section2 = Instance.new("Frame")
+Section2.Size = UDim2.new(1, -30, 0, 90)
+Section2.Position = UDim2.new(0, 15, 0, 220)
+Section2.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+Section2.Parent = MainFrame
+
+local UICorner_S2 = Instance.new("UICorner")
+UICorner_S2.CornerRadius = UDim.new(0, 6)
+UICorner_S2.Parent = Section2
+
+local CopyBtn = Instance.new("TextButton")
+CopyBtn.Size = UDim2.new(1, -20, 0, 45)
+CopyBtn.Position = UDim2.new(0, 10, 0, 22)
+CopyBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 180)
+CopyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+CopyBtn.Text = "Copy your server ID"
+CopyBtn.Font = Enum.Font.GothamBold
+CopyBtn.TextSize = 16
+CopyBtn.Parent = Section2
+
+local UICorner_CopyBtn = Instance.new("UICorner")
+UICorner_CopyBtn.CornerRadius = UDim.new(0, 6)
+UICorner_CopyBtn.Parent = CopyBtn
+
+---------------------------
+-- FUNCTIONALITY
+---------------------------
+
+-- Close Button
+CloseBtn.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
+
+-- Join Server Function
+JoinBtn.MouseButton1Click:Connect(function()
+    local jobId = ServerInput.Text
+    -- Trim whitespace
+    jobId = jobId:match("^%s*(.-)%s*$")
+    
+    if jobId and jobId ~= "" then
+        JoinBtn.Text = "Joining..."
+        pcall(function()
+            TeleportService:TeleportToPlaceInstance(game.PlaceId, jobId, player)
+        end)
+        task.wait(2)
+        JoinBtn.Text = "Join Server"
+    end
+end)
+
+-- Copy Server ID Function
+CopyBtn.MouseButton1Click:Connect(function()
+    local currentJobId = game.JobId
+    
+    if currentJobId == "" then
+        CopyBtn.Text = "Not in a server!"
+    else
+        -- setclipboard is an executor-only function. 
+        if setclipboard then
+            setclipboard(currentJobId)
+            CopyBtn.Text = "Copied!"
+        else
+            -- Fallback for standard Roblox Studio/Client
+            ServerInput.Text = currentJobId
+            CopyBtn.Text = "ID pasted above!"
+        end
+    end
+    
+    task.wait(2)
+    CopyBtn.Text = "Copy your server ID"
+end)
+
+-- Custom Dragging Logic (Smooth)
+local dragging = false
+local dragInput, mousePos, framePos
+
+MainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        mousePos = input.Position
+        framePos = MainFrame.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+MainFrame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - mousePos
+        MainFrame.Position = UDim2.new(
+            framePos.X.Scale, 
+            framePos.X.Offset + delta.X, 
+            framePos.Y.Scale, 
+            framePos.Y.Offset + delta.Y
+        )
+    end
+end)
