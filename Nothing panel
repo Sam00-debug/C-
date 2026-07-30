@@ -353,12 +353,13 @@ KeyFrame.Visible = true -- Reveal Key System after intro
 -- 7. PAYLOAD BUTTON POPULATION
 --=========================================
 local buttonsData = {
-    {"under maintenance have to wait💔🥀", "https://pastebin.com/raw/HF5U96vj"},
+    {"under maintenance have to wait💔🥀", "https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Notice"},
     
 
-{"prop","https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Prop%20script"},
-{"chat","https://raw.githubusercontent.com/Sam00-debug/Nothing-chat/refs/heads/main/Script"},
-{"infinite yield ","https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"}
+{"prop🎁","https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Prop%20script"},
+{"chat💬","https://raw.githubusercontent.com/Sam00-debug/Nothing-chat/refs/heads/main/Script"},
+{"infinite yield🛠️ ","https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"},
+{"discord 🔗","https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Dc%20link"}
 
 
 
