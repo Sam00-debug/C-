@@ -362,8 +362,8 @@ local buttonsData =
 {
 
 {"informationℹ️","https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Information"},
-    
-{"Chat💬",{"https://raw.githubusercontent.com/Sam00-debug/Nothing-chat/refs/heads/main/Script"}},
+    {"join players⛩️",{"https://raw.githubusercontent.com/Sam00-debug/Nothing-chat/refs/heads/main/Join%20server"}},
+{"Chat💬",{"https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Script"}},
 {"infinite yield 💤","https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"},
     {"prop🎁","https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Prop%20script"},
     {"mecha🤖","https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Mecha%20robot"},
