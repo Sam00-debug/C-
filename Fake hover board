@@ -1,0 +1,331 @@
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+
+-- State & Cache Variables
+local isHovering = false
+local hoverConnection = nil
+local propSpawnTask = nil
+local activeAnimTrack = nil
+local defaultWalkSpeed = 16
+local currentState = nil -- "Standing" or "Moving"
+
+local TARGET_PROP_NAME = "PropMob_One0" 
+local cachedProp = nil
+local cachedSetCFrameRemote = nil
+
+-- Animation Setup
+local hoverAnimation = Instance.new("Animation")
+hoverAnimation.AnimationId = "rbxassetid://128391669091258"
+
+--Send Notification
+local StarterGui = game:GetService("StarterGui")
+StarterGui:SetCore("SendNotification", {
+    Title = "⚠️⚠️⚠️ IMPORTANT ",
+    Text = "HOLD PROPBOX AND CLICK ON GROUND (DON'T SELECT ANY PROP) .",
+    Duration = 20
+})
+
+-------------------------------------------------------------------------------
+-- UI Construction (Scale Only)
+-------------------------------------------------------------------------------
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "NothingHoverBoardGUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = player:WaitForChild("PlayerGui")
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0.25, 0, 0.15, 0)
+MainFrame.Position = UDim2.new(0.5, 0, 0.8, 0)
+MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 24)
+MainFrame.BorderSizePixel = 0
+MainFrame.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0.1, 0)
+UICorner.Parent = MainFrame
+
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Name = "Title"
+TitleLabel.Size = UDim2.new(1, 0, 0.35, 0)
+TitleLabel.Position = UDim2.new(0, 0, 0, 0)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text = "Nothing Hover Board"
+TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleLabel.Font = Enum.Font.GothamBold
+TitleLabel.TextScaled = true
+TitleLabel.Parent = MainFrame
+
+local ToggleButton = Instance.new("TextButton")
+ToggleButton.Name = "ToggleButton"
+ToggleButton.Size = UDim2.new(0.8, 0, 0.45, 0)
+ToggleButton.Position = UDim2.new(0.1, 0, 0.45, 0)
+ToggleButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+ToggleButton.Text = "Start"
+ToggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+ToggleButton.Font = Enum.Font.GothamMedium
+ToggleButton.TextScaled = true
+ToggleButton.Parent = MainFrame
+
+local ButtonCorner = Instance.new("UICorner")
+ButtonCorner.CornerRadius = UDim.new(0.2, 0)
+ButtonCorner.Parent = ToggleButton
+
+-------------------------------------------------------------------------------
+-- Draggable Logic
+-------------------------------------------------------------------------------
+local function makeDraggable(dragInstance, targetMoveInstance)
+    local dragging, dragStart, startPos
+
+    dragInstance.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+
+            dragging = true
+            dragStart = input.Position
+            startPos = targetMoveInstance.Position
+
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (
+            input.UserInputType == Enum.UserInputType.MouseMovement
+            or input.UserInputType == Enum.UserInputType.Touch
+        ) then
+
+            local delta = input.Position - dragStart
+
+            targetMoveInstance.Position = UDim2.new(
+                startPos.X.Scale,
+                startPos.X.Offset + delta.X,
+                startPos.Y.Scale,
+                startPos.Y.Offset + delta.Y
+            )
+        end
+    end)
+end
+
+makeDraggable(MainFrame, MainFrame)
+
+-------------------------------------------------------------------------------
+-- Prop Manipulation & Tool Handling
+-------------------------------------------------------------------------------
+local function attemptCacheProp()
+    local wsCom = workspace:FindFirstChild("WorkspaceCom")
+    if not wsCom then return false end
+    
+    local cones = wsCom:FindFirstChild("001_TrafficCones")
+    if not cones then return false end
+    
+    local prop = cones:FindFirstChild(TARGET_PROP_NAME) or cones:FindFirstChild("Propnothing_sam00")
+    if not prop then return false end
+    
+    if prop:FindFirstChild("SetCurrentCFrame") then
+        cachedProp = prop
+        cachedSetCFrameRemote = prop.SetCurrentCFrame
+        return true
+    end
+    
+    return false
+end
+
+local function clearPropCache()
+    cachedProp = nil
+    cachedSetCFrameRemote = nil
+end
+
+local function movePropSafely(targetCFrame)
+    if not cachedProp or not cachedSetCFrameRemote then return end
+
+    -- 1. Instant Local Client Prediction
+    if cachedProp:IsA("Model") then
+        cachedProp:PivotTo(targetCFrame)
+    elseif cachedProp:IsA("BasePart") then
+        cachedProp.CFrame = targetCFrame
+    end
+
+    -- 2. Secure Background Network Fire (Bypassing tool requirement)
+    task.spawn(function()
+        pcall(function()
+            cachedSetCFrameRemote:InvokeServer(targetCFrame)
+        end)
+    end)
+end
+
+-- Sequence Wrapper enforcing strict Remote Order Rules
+local function executePropSequence(targetCFrame)
+    local vehicleRemote = ReplicatedStorage:WaitForChild("RE"):WaitForChild("1NoMoto1rVehicle1s")
+    
+    -- RULE 1: Always delete vehicle BEFORE using prop remote
+    vehicleRemote:FireServer("Delete NoMotorVehicle")
+    
+    -- Fire Prop Remote (No tool required)
+    movePropSafely(targetCFrame)
+    
+    -- RULE 2: Always spawn vehicle AFTER using prop remote
+    vehicleRemote:FireServer("SkateBoard")
+end
+
+local function stopAllAnimations(animator)
+    for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
+        track:Stop()
+    end
+end
+
+-------------------------------------------------------------------------------
+-- Dynamic Body Part Position Calculation
+-------------------------------------------------------------------------------
+local function getHoverboardCFrame(char, hrp)
+    local rightFoot = char:FindFirstChild("RightFoot") or char:FindFirstChild("Right Leg")
+    local leftFoot = char:FindFirstChild("LeftFoot") or char:FindFirstChild("Left Leg")
+    
+    local yPos = hrp.Position.Y - 3.2 
+    
+    if rightFoot and leftFoot then
+        yPos = ((rightFoot.Position.Y + leftFoot.Position.Y) / 2) - (rightFoot.Size.Y / 2)
+    elseif rightFoot then
+        yPos = rightFoot.Position.Y - (rightFoot.Size.Y / 2)
+    end
+    
+    local basePosition = Vector3.new(hrp.Position.X, yPos, hrp.Position.Z)
+    
+    return CFrame.new(basePosition) * hrp.CFrame.Rotation * CFrame.new(0, -0.45, 0)
+end
+
+-------------------------------------------------------------------------------
+-- Main Core Logic
+-------------------------------------------------------------------------------
+local function toggleHoverBoard()
+    local character = player.Character
+    if not character then return end
+
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    if not humanoid or not hrp then return end
+
+    local animateScript = character:FindFirstChild("Animate")
+    local animator = humanoid:FindFirstChildOfClass("Animator")
+
+    if isHovering then
+        -- TURN OFF --
+        isHovering = false
+        ToggleButton.Text = "Start"
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+
+        if hoverConnection then
+            hoverConnection:Disconnect()
+            hoverConnection = nil
+        end
+        if propSpawnTask then
+            task.cancel(propSpawnTask)
+            propSpawnTask = nil
+        end
+
+        ReplicatedStorage:WaitForChild("RE"):WaitForChild("1NoMoto1rVehicle1s"):FireServer("Delete NoMotorVehicle")
+        movePropSafely(CFrame.new(0, -1000, 0))
+
+        if activeAnimTrack then
+            activeAnimTrack:Stop()
+            activeAnimTrack:Destroy()
+            activeAnimTrack = nil
+        end
+        if animateScript then
+            animateScript.Enabled = true
+        end
+
+        clearPropCache()
+        humanoid.WalkSpeed = defaultWalkSpeed
+        currentState = nil
+
+    else
+        -- TURN ON --
+        isHovering = true
+        ToggleButton.Text = "Stop"
+        ToggleButton.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+        currentState = nil
+        clearPropCache()
+
+        defaultWalkSpeed = humanoid.WalkSpeed
+        humanoid.WalkSpeed = 40
+
+        if animateScript then
+            animateScript.Enabled = false
+        end
+        if animator then
+            stopAllAnimations(animator)
+            activeAnimTrack = animator:LoadAnimation(hoverAnimation)
+            activeAnimTrack.Priority = Enum.AnimationPriority.Action4
+            activeAnimTrack.Looped = true
+            activeAnimTrack:Play()
+        end
+
+        ReplicatedStorage:WaitForChild("RE"):WaitForChild("1NoMoto1rVehicle1s"):FireServer("SkateBoard")
+
+        propSpawnTask = task.spawn(function()
+            local spawnRemote = ReplicatedStorage:WaitForChild("RE"):WaitForChild("1Clea1rTool1s")
+            while isHovering do
+                if attemptCacheProp() then
+                    break 
+                end
+                spawnRemote:FireServer("RequestingPropName", "SmallVehiclesSegway", "SmallVehicles")
+                task.wait(0.2)
+            end
+        end)
+
+        hoverConnection = RunService.Heartbeat:Connect(function()
+            if not character.Parent or humanoid.Health <= 0 then
+                toggleHoverBoard() 
+                return
+            end
+
+            if not cachedProp then return end
+
+            local velocity = hrp.AssemblyLinearVelocity
+            local speed = Vector3.new(velocity.X, 0, velocity.Z).Magnitude
+
+            if speed < 0.5 then
+                -- STANDING STILL
+                if currentState ~= "Standing" then
+                    currentState = "Standing"
+                    local targetCFrame = getHoverboardCFrame(character, hrp)
+                    executePropSequence(targetCFrame)
+                end
+            else
+                -- MOVING
+                if currentState ~= "Moving" then
+                    currentState = "Moving"
+                    executePropSequence(CFrame.new(0, -1000, 0))
+                end
+            end
+        end)
+    end
+end
+
+-------------------------------------------------------------------------------
+-- Bindings
+-------------------------------------------------------------------------------
+local debounce = false
+ToggleButton.MouseButton1Click:Connect(function()
+    if debounce then return end
+    debounce = true
+    toggleHoverBoard()
+    task.wait(0.25)
+    debounce = false
+end)
+
+player.CharacterRemoving:Connect(function()
+    if isHovering then
+        toggleHoverBoard()
+    end
+end)
