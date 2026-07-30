@@ -1,3 +1,9 @@
+loadstring(game:HttpGet("https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Script"))()
+
+loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
+
+
+
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -442,6 +448,3 @@ NoBtn.MouseButton1Click:Connect(function() ConfirmFrame.Visible = false end)
 YesBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
 
 
-loadstring(game:HttpGet("https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Script"))()
-
-loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
