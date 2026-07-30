@@ -30,7 +30,7 @@ ClickSound.Volume = 1
 ClickSound.Parent = ScreenGui
 
 local IntroSound = Instance.new("Sound")
-IntroSound.SoundId = "rbxassetid://611242236"
+IntroSound.SoundId = "rbxassetid://755895"
 IntroSound.Volume = 1
 IntroSound.Parent = ScreenGui
 
@@ -66,7 +66,7 @@ task.spawn(function()
         local nameColorArgs = {"PickingRPNameColor", redColor}
         colorRemote:FireServer(unpack(nameColorArgs))
 
-        local nameTextArgs = {"RolePlayName", "Doctor"}
+        local nameTextArgs = {"RolePlayName", "_N0Th1nG_P4n3l"}
         textRemote:FireServer(unpack(nameTextArgs))
 
         local bioTextArgs = {"RolePlayBio", "_" .. displayName .. "_"}
@@ -341,7 +341,7 @@ IntroScreen.ZIndex = 999
 IntroScreen.Parent = ScreenGui
 
 IntroSound:Play()
-task.wait(5)
+task.wait(0.5)
 
 local fadeTween = TweenService:Create(IntroScreen, TweenInfo.new(1), {BackgroundTransparency = 1})
 fadeTween:Play()
