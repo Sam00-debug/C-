@@ -1,0 +1,483 @@
+-- // Services
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local TextChatService = game:GetService("TextChatService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CoreGui = game:GetService("CoreGui")
+local Camera = workspace.CurrentCamera
+
+local LocalPlayer = Players.LocalPlayer
+
+-- // Chat Function with Debounce
+local lastCommandTime = 0
+local function sendCommand(message)
+	if tick() - lastCommandTime < 0.25 then return end -- Prevents chat flood limits
+	lastCommandTime = tick()
+	
+	if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+		local RBXGeneral = TextChatService.TextChannels:FindFirstChild("RBXGeneral")
+		if RBXGeneral then
+			RBXGeneral:SendAsync(message)
+		end
+	else
+		local ChatEvents = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents")
+		if ChatEvents then
+			local SayMessageRequest = ChatEvents:FindFirstChild("SayMessageRequest")
+			if SayMessageRequest then
+				SayMessageRequest:FireServer(message, "All")
+			end
+		end
+	end
+end
+
+-- // Default Reversion Values for specific commands
+local defaultValues = {
+	speed = "16",
+	jumppower = "50",
+	gravity = "196.2",
+	brightness = "1",
+	animationspeed = "1",
+	fov = "70"
+}
+
+-- // ScreenGui Setup
+local guiName = "SecretPlaceUI"
+local oldGui = CoreGui:FindFirstChild(guiName) or LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild(guiName)
+if oldGui then oldGui:Destroy() end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = guiName
+ScreenGui.ResetOnSpawn = false
+local success = pcall(function() ScreenGui.Parent = CoreGui end)
+if not success then ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
+
+-- // Helper for Auto Scaled Text
+local function ApplyTextScaling(element, maxSize)
+	element.TextScaled = true
+	local constraint = Instance.new("UITextSizeConstraint")
+	constraint.MaxTextSize = maxSize
+	constraint.Parent = element
+end
+
+-- // Reopen Button (Hidden by default)
+local OpenButton = Instance.new("TextButton")
+OpenButton.Name = "ReopenButton"
+OpenButton.Size = UDim2.new(0, 50, 0, 50)
+OpenButton.Position = UDim2.new(0, 10, 0.5, -25) -- Middle left of screen
+OpenButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+OpenButton.Text = "O"
+OpenButton.TextColor3 = Color3.fromRGB(80, 200, 80)
+OpenButton.Font = Enum.Font.GothamBold
+OpenButton.BorderSizePixel = 0
+OpenButton.Visible = false
+OpenButton.Parent = ScreenGui
+ApplyTextScaling(OpenButton, 24)
+
+local OpenUICorner = Instance.new("UICorner")
+OpenUICorner.CornerRadius = UDim.new(0.2, 0)
+OpenUICorner.Parent = OpenButton
+
+local OpenUIStroke = Instance.new("UIStroke")
+OpenUIStroke.Color = Color3.fromRGB(0, 0, 0)
+OpenUIStroke.Thickness = 2
+OpenUIStroke.Parent = OpenButton
+
+-- // Main Frame (Strict Scale & Max Constraint)
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0.9, 0, 0.9, 0) 
+MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0) 
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+MainFrame.BorderSizePixel = 0
+MainFrame.Parent = ScreenGui
+
+local SizeConstraint = Instance.new("UISizeConstraint")
+SizeConstraint.MaxSize = Vector2.new(600, 600)
+SizeConstraint.Parent = MainFrame
+
+local MainUICorner = Instance.new("UICorner")
+MainUICorner.CornerRadius = UDim.new(0.02, 0)
+MainUICorner.Parent = MainFrame
+
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Color = Color3.fromRGB(0, 0, 0)
+UIStroke.Thickness = 3
+UIStroke.Parent = MainFrame
+
+-- // Topbar & Window Controls
+local Topbar = Instance.new("Frame")
+Topbar.Size = UDim2.new(1, 0, 0.1, 0)
+Topbar.Position = UDim2.new(0, 0, 0, 0)
+Topbar.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+Topbar.BorderSizePixel = 0
+Topbar.Parent = MainFrame
+
+local TopbarUICorner = Instance.new("UICorner")
+TopbarUICorner.CornerRadius = UDim.new(0.15, 0)
+TopbarUICorner.Parent = Topbar
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(0.3, 0, 0.7, 0)
+Title.Position = UDim2.new(0.04, 0, 0.1, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "Simple hacks"
+Title.TextColor3 = Color3.fromRGB(230, 230, 230)
+Title.Font = Enum.Font.GothamBold
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = Topbar
+ApplyTextScaling(Title, 28)
+
+local MinButton = Instance.new("TextButton")
+MinButton.Size = UDim2.new(0.09, 0, 0.7, 0)
+MinButton.Position = UDim2.new(0.78, 0, 0.15, 0)
+MinButton.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+MinButton.Text = "-"
+MinButton.TextColor3 = Color3.fromRGB(220, 220, 220)
+MinButton.Font = Enum.Font.GothamBold
+MinButton.BorderSizePixel = 0
+MinButton.Parent = Topbar
+ApplyTextScaling(MinButton, 24)
+
+local MinCorner = Instance.new("UICorner")
+MinCorner.CornerRadius = UDim.new(0.2, 0)
+MinCorner.Parent = MinButton
+
+local CloseButton = Instance.new("TextButton")
+CloseButton.Size = UDim2.new(0.09, 0, 0.7, 0)
+CloseButton.Position = UDim2.new(0.89, 0, 0.15, 0)
+CloseButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+CloseButton.Text = "X"
+CloseButton.TextColor3 = Color3.fromRGB(220, 220, 220)
+CloseButton.Font = Enum.Font.GothamBold
+CloseButton.BorderSizePixel = 0
+CloseButton.Parent = Topbar
+ApplyTextScaling(CloseButton, 18)
+
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(0.2, 0)
+CloseCorner.Parent = CloseButton
+
+-- // Custom Dragging Logic
+local dragging, dragInput, dragStart, startPos
+Topbar.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPos = MainFrame.Position
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then dragging = false end
+		end)
+	end
+end)
+Topbar.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+		dragInput = input
+	end
+end)
+UserInputService.InputChanged:Connect(function(input)
+	if input == dragInput and dragging then
+		local delta = input.Position - dragStart
+		local viewport = Camera.ViewportSize
+		local scaleX = delta.X / viewport.X
+		local scaleY = delta.Y / viewport.Y
+		MainFrame.Position = UDim2.new(startPos.X.Scale + scaleX, 0, startPos.Y.Scale + scaleY, 0)
+	end
+end)
+
+-- // Minimize & Reopen Logic
+MinButton.MouseButton1Click:Connect(function()
+	MainFrame.Visible = false
+	OpenButton.Visible = true
+end)
+
+OpenButton.MouseButton1Click:Connect(function()
+	MainFrame.Visible = true
+	OpenButton.Visible = false
+end)
+
+CloseButton.MouseButton1Click:Connect(function()
+	ScreenGui:Destroy()
+end)
+
+-- // Scrolling Frame (Fixed Layout Spamming)
+local ScrollFrame = Instance.new("ScrollingFrame")
+ScrollFrame.Size = UDim2.new(0.96, 0, 0.88, 0)
+ScrollFrame.Position = UDim2.new(0.02, 0, 0.11, 0)
+ScrollFrame.BackgroundTransparency = 1
+ScrollFrame.ScrollBarThickness = 6
+ScrollFrame.ScrollBarImageColor3 = Color3.fromRGB(150, 150, 150)
+ScrollFrame.BorderSizePixel = 0
+ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+ScrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+ScrollFrame.Parent = MainFrame
+
+-- Using robust UIListLayout to stop F9 constraint spam
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 8) 
+UIListLayout.Parent = ScrollFrame
+
+local UIPadding = Instance.new("UIPadding")
+UIPadding.PaddingTop = UDim.new(0, 10)
+UIPadding.PaddingBottom = UDim.new(0, 15)
+UIPadding.PaddingLeft = UDim.new(0, 5)
+UIPadding.PaddingRight = UDim.new(0, 10)
+UIPadding.Parent = ScrollFrame
+
+-- // Global Selected Player
+local selectedTargetPlayer = "All"
+
+-- // UI Component Builders
+local function CreateSectionHeader(titleText)
+	local Header = Instance.new("TextLabel")
+	Header.Size = UDim2.new(1, 0, 0, 25) -- Fixed offset stops layout spam inside AutoCanvas
+	Header.BackgroundTransparency = 1
+	Header.Text = titleText
+	Header.TextColor3 = Color3.fromRGB(220, 220, 220)
+	Header.Font = Enum.Font.GothamSemibold
+	Header.TextXAlignment = Enum.TextXAlignment.Left
+	Header.Parent = ScrollFrame
+	ApplyTextScaling(Header, 18)
+end
+
+local function CreateToggleWithInput(commandName)
+	local Container = Instance.new("Frame")
+	Container.Size = UDim2.new(1, 0, 0, 42)
+	Container.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+	Container.BorderSizePixel = 0
+	Container.Parent = ScrollFrame
+
+	local ContainerCorner = Instance.new("UICorner")
+	ContainerCorner.CornerRadius = UDim.new(0.15, 0)
+	ContainerCorner.Parent = Container
+
+	local ToggleBtn = Instance.new("TextButton")
+	ToggleBtn.Size = UDim2.new(0.63, 0, 0.8, 0)
+	ToggleBtn.Position = UDim2.new(0.02, 0, 0.1, 0)
+	ToggleBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+	ToggleBtn.Text = commandName:upper() .. " [OFF]"
+	ToggleBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
+	ToggleBtn.Font = Enum.Font.GothamBold
+	ToggleBtn.BorderSizePixel = 0
+	ToggleBtn.Parent = Container
+	ApplyTextScaling(ToggleBtn, 14)
+
+	local ToggleCorner = Instance.new("UICorner")
+	ToggleCorner.CornerRadius = UDim.new(0.15, 0)
+	ToggleCorner.Parent = ToggleBtn
+
+	local InputBox = Instance.new("TextBox")
+	InputBox.Size = UDim2.new(0.31, 0, 0.8, 0)
+	InputBox.Position = UDim2.new(0.67, 0, 0.1, 0)
+	InputBox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+	InputBox.TextColor3 = Color3.fromRGB(220, 220, 220)
+	InputBox.PlaceholderText = "Val"
+	InputBox.Text = ""
+	InputBox.Font = Enum.Font.Gotham
+	InputBox.BorderSizePixel = 0
+	InputBox.Parent = Container
+	ApplyTextScaling(InputBox, 14)
+
+	local InputCorner = Instance.new("UICorner")
+	InputCorner.CornerRadius = UDim.new(0.15, 0)
+	InputCorner.Parent = InputBox
+
+	local toggled = false
+	ToggleBtn.MouseButton1Click:Connect(function()
+		toggled = not toggled
+		if toggled then
+			ToggleBtn.Text = commandName:upper() .. " [ON]"
+			ToggleBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+			local val = InputBox.Text ~= "" and InputBox.Text or "1"
+			sendCommand(";" .. commandName .. " " .. val)
+		else
+			ToggleBtn.Text = commandName:upper() .. " [OFF]"
+			ToggleBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+			
+			-- Check for default values to prevent using ";unspeed"
+			if defaultValues[commandName:lower()] then
+				sendCommand(";" .. commandName .. " " .. defaultValues[commandName:lower()])
+			else
+				sendCommand(";un" .. commandName)
+			end
+		end
+	end)
+end
+
+local function CreateSimpleToggle(commandName, onOverride, offOverride)
+	local ToggleBtn = Instance.new("TextButton")
+	ToggleBtn.Size = UDim2.new(1, 0, 0, 42)
+	ToggleBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+	ToggleBtn.Text = commandName:upper() .. " [OFF]"
+	ToggleBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
+	ToggleBtn.Font = Enum.Font.GothamBold
+	ToggleBtn.BorderSizePixel = 0
+	ToggleBtn.Parent = ScrollFrame
+	ApplyTextScaling(ToggleBtn, 14)
+
+	local ToggleCorner = Instance.new("UICorner")
+	ToggleCorner.CornerRadius = UDim.new(0.15, 0)
+	ToggleCorner.Parent = ToggleBtn
+
+	local toggled = false
+	ToggleBtn.MouseButton1Click:Connect(function()
+		toggled = not toggled
+		if toggled then
+			ToggleBtn.Text = commandName:upper() .. " [ON]"
+			ToggleBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+			sendCommand(";" .. (onOverride or commandName))
+		else
+			ToggleBtn.Text = commandName:upper() .. " [OFF]"
+			ToggleBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+			
+			if offOverride then
+				sendCommand(";" .. offOverride)
+			elseif defaultValues[commandName:lower()] then
+				sendCommand(";" .. commandName .. " " .. defaultValues[commandName:lower()])
+			else
+				sendCommand(";un" .. commandName)
+			end
+		end
+	end)
+end
+
+local function CreatePlayerToggle(commandName, customPrefix)
+	local ToggleBtn = Instance.new("TextButton")
+	ToggleBtn.Size = UDim2.new(1, 0, 0, 42)
+	ToggleBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+	ToggleBtn.Text = commandName:upper() .. " [OFF]"
+	ToggleBtn.TextColor3 = Color3.fromRGB(220, 220, 220)
+	ToggleBtn.Font = Enum.Font.GothamBold
+	ToggleBtn.BorderSizePixel = 0
+	ToggleBtn.Parent = ScrollFrame
+	ApplyTextScaling(ToggleBtn, 14)
+
+	local ToggleCorner = Instance.new("UICorner")
+	ToggleCorner.CornerRadius = UDim.new(0.15, 0)
+	ToggleCorner.Parent = ToggleBtn
+
+	local toggled = false
+	ToggleBtn.MouseButton1Click:Connect(function()
+		toggled = not toggled
+		local target = selectedTargetPlayer
+		if toggled then
+			ToggleBtn.Text = commandName:upper() .. " [ON]"
+			ToggleBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
+			
+			if customPrefix then
+				sendCommand(";" .. customPrefix .. " " .. target)
+			else
+				sendCommand(";" .. commandName .. " " .. target)
+			end
+		else
+			ToggleBtn.Text = commandName:upper() .. " [OFF]"
+			ToggleBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+			
+			if customPrefix then
+				sendCommand(";un" .. customPrefix .. " " .. target)
+			else
+				sendCommand(";un" .. commandName .. " " .. target)
+			end
+		end
+	end)
+end
+
+local function CreatePlayerSelector()
+	local Container = Instance.new("Frame")
+	Container.Size = UDim2.new(1, 0, 0, 42)
+	Container.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+	Container.BorderSizePixel = 0
+	Container.Parent = ScrollFrame
+
+	local ContainerCorner = Instance.new("UICorner")
+	ContainerCorner.CornerRadius = UDim.new(0.15, 0)
+	ContainerCorner.Parent = Container
+	
+	local InputBox = Instance.new("TextBox")
+	InputBox.Size = UDim2.new(0.96, 0, 0.7, 0)
+	InputBox.Position = UDim2.new(0.02, 0, 0.15, 0)
+	InputBox.BackgroundTransparency = 1
+	InputBox.TextColor3 = Color3.fromRGB(220, 220, 220)
+	InputBox.PlaceholderText = "Type Target Player Name Here..."
+	InputBox.Text = selectedTargetPlayer
+	InputBox.Font = Enum.Font.Gotham
+	InputBox.TextXAlignment = Enum.TextXAlignment.Left
+	InputBox.Parent = Container
+	ApplyTextScaling(InputBox, 14)
+	
+	InputBox.FocusLost:Connect(function()
+		if InputBox.Text ~= "" then
+			selectedTargetPlayer = InputBox.Text
+		else
+			InputBox.Text = "All"
+			selectedTargetPlayer = "All"
+		end
+	end)
+end
+
+-- // Populate Section 1: Inputs
+CreateSectionHeader("VALUE CONTROLS")
+local inputCommands = {
+	"fly", "speed", "jumppower", "gravity", "vehiclespeed", 
+	"spin", "vehiclefly", "animationspeed", "brightness", 
+	"animation", "emote"
+}
+for _, cmd in ipairs(inputCommands) do
+	CreateToggleWithInput(cmd)
+end
+
+-- // Populate Section 2: Simple Toggles
+CreateSectionHeader("STANDARD TOGGLES")
+local simpleCommands = {
+	{name = "nosit"},
+	{name = "noclip"},
+	{name = "invisible", on = "invisible", off = "visible"},
+	{name = "platform"},
+	{name = "swim"},
+	{name = "serverhop"},
+	{name = "infinite jump", on = "infinitejump", off = "uninfinitejump"},
+	{name = "console"},
+	{name = "rejoin"},
+	{name = "antiafk"},
+	{name = "antilag"},
+	{name = "anti fling", on = "antifling", off = "unantifling"},
+	{name = "screenshot"},
+	{name = "control lock", on = "ctrllock", off = "unctrllock"},
+	{name = "Darkchat", on = "darkchat", off = "undarkchat"},
+	{name = "fov"},
+	{name = "fakeout"},
+	{name = "Nofog", on = "nofog", off = "unnofog"},
+	{name = "global shadow", on = "globalshadow", off = "unglobalshadow"},
+	{name = "reset"},
+	{name = "sit"},
+	{name = "dance"}
+}
+for _, v in ipairs(simpleCommands) do
+	CreateSimpleToggle(v.name, v.on, v.off)
+end
+
+-- // Populate Section 3: Player Targets
+CreateSectionHeader("TARGET SYSTEM")
+CreatePlayerSelector()
+
+local playerCommands = {
+	{name = "teleport", custom = "to"},
+	{name = "view"},
+	{name = "locate"},
+	{name = "hitbox"},
+	{name = "private"},
+	{name = "account age", custom = "age"},
+	{name = "join date", custom = "joindate"},
+	{name = "copy user id", custom = "copyuserid"},
+	{name = "scare"},
+	{name = "headsit"},
+	{name = "follow"},
+	{name = "orbit"},
+	{name = "stare"},
+	{name = "hitboxes"},
+	{name = "copyanimation"}
+}
+for _, v in ipairs(playerCommands) do
+	CreatePlayerToggle(v.name, v.custom)
+end
