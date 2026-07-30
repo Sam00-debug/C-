@@ -372,9 +372,9 @@ local buttonsData =
     {"fake hover board🛹","https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Fake%20hover%20board"},
     {"simple hacks⚡","https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Simple%20hacks"},
     {"spammer📢","https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Spammer"},
-    {"chat💬","https://raw.githubusercontent.com/Sam00-debug/Nothing-chat/refs/heads/main/Script"}
+    {"chat💬","https://raw.githubusercontent.com/Sam00-debug/Nothing-chat/refs/heads/main/Dc%20link"}
     }
-}
+
 
 
 
@@ -442,9 +442,6 @@ NoBtn.MouseButton1Click:Connect(function() ConfirmFrame.Visible = false end)
 YesBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
 
 
-loadstring(game:HttpGet("https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Dc%20link
-"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Script"))()
 
-
-loadstring(game:HttpGet('https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source'))()
-
+loadstring(game:HttpGet("https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"))()
