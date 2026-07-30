@@ -1,0 +1,244 @@
+
+-- SERVICES 
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+
+-- variables
+local lp = Players.LocalPlayer
+local char, root, hum
+local selectedPlayer = nil
+local running = false
+local currentTrack = nil
+
+-- emote id
+local animId = "121803583995185"
+
+-- BIND CHARACTER
+local function bindCharacter(c)
+    char = c
+    root = char:WaitForChild("HumanoidRootPart")
+    hum = char:WaitForChild("Humanoid")
+    running = false
+    if currentTrack then currentTrack:Stop() end
+end
+
+if lp.Character then bindCharacter(lp.Character) end
+lp.CharacterAdded:Connect(bindCharacter)
+
+-- Emote logic 
+local function toggleEmote(shouldPlay)
+    local animator = hum:FindFirstChildOfClass("Animator") or hum:WaitForChild("Animator")
+    local animateScript = char:FindFirstChild("Animate")
+
+    if shouldPlay then
+        if animateScript then animateScript.Disabled = true end
+        
+        for _, t in pairs(animator:GetPlayingAnimationTracks()) do
+            t:Stop(0.1)
+        end
+
+        local success, objects = pcall(function() 
+            return game:GetObjects("rbxassetid://" .. animId) 
+        end)
+
+        local animation
+        if success and objects[1] and objects[1]:IsA("Animation") then
+            animation = objects[1]
+        else
+            animation = Instance.new("Animation")
+            animation.AnimationId = "rbxassetid://" .. animId
+        end
+
+        currentTrack = animator:LoadAnimation(animation)
+        currentTrack.Priority = Enum.AnimationPriority.Action4
+        currentTrack.Looped = true
+        currentTrack:Play()
+        print("Emote Started")
+    else
+        if currentTrack then
+            currentTrack:Stop(0.1)
+            currentTrack = nil
+        end
+        if animateScript then animateScript.Disabled = false end
+    end
+end
+
+-- --- Fixed UI System ---
+local gui = Instance.new("ScreenGui", game.CoreGui)
+gui.Name = "ModernFollowerUI"
+gui.ResetOnSpawn = false
+
+local mainFrame = Instance.new("Frame", gui)
+mainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+mainFrame.Size = UDim2.fromScale(0.27, 0.7)
+mainFrame.Position = UDim2.fromScale(0.5, 0.5)
+mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+mainFrame.BorderSizePixel = 0
+Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 12)
+local stroke = Instance.new("UIStroke", mainFrame)
+stroke.Color = Color3.fromRGB(45, 45, 45)
+stroke.Thickness = 0.05
+
+local header = Instance.new("Frame", mainFrame)
+header.Size = UDim2.fromScale(1, 0.15)
+header.Position = UDim2.fromScale(0, 0)
+header.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+header.BorderSizePixel = 0
+Instance.new("UICorner", header).CornerRadius = UDim.new(0, 06)
+
+local title = Instance.new("TextLabel", header)
+title.Size = UDim2.fromScale(0.65, 1)
+title.Position = UDim2.fromScale(0.05, 0)
+title.BackgroundTransparency = 1
+title.Text = "Nothing Bang 🖕🏻😛"
+title.TextScaled = true
+title.TextColor3 = Color3.new(1, 1, 1)
+title.Font = Enum.Font.GothamBold
+title.TextXAlignment = Enum.TextXAlignment.Left
+
+local closeBtn = Instance.new("TextButton", header)
+closeBtn.Size = UDim2.fromScale(0.15, 0.6)
+closeBtn.Position = UDim2.fromScale(0.85, 0.5)
+closeBtn.AnchorPoint = Vector2.new(1, 0.5)
+closeBtn.Text = "-"
+closeBtn.BackgroundTransparency = true 
+closeBtn.TextColor3 = Color3.fromRGB(1, 255, 1)
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextScaled = true
+
+local destroy = Instance.new("TextButton", header)
+destroy.Size = UDim2.fromScale(0.15, 0.6)
+destroy.Position = UDim2.fromScale(0.98, 0.5)
+destroy.AnchorPoint = Vector2.new(1, 0.5)
+destroy.Text = "X"
+destroy.BackgroundTransparency = true 
+destroy.TextColor3 = Color3.fromRGB(251, 1, 1)
+destroy.Font = Enum.Font.GothamBold
+destroy.TextScaled = true
+
+local list = Instance.new("ScrollingFrame", mainFrame)
+list.Size = UDim2.fromScale(1, 0.65)
+list.Position = UDim2.fromScale(0.1, 0.1)
+list.AnchorPoint = Vector2.new(0,0)
+list.BackgroundTransparency = 1
+list.ScrollBarThickness = 3
+list.AutomaticCanvasSize = Enum.AutomaticSize.Y
+list.CanvasSize = UDim2.new(0,0,0,0)
+
+local layout = Instance.new("UIListLayout", list)
+layout.Padding = UDim.new(0, 5)
+
+local startBtn = Instance.new("TextButton", mainFrame)
+startBtn.Size = UDim2.fromScale(0.87, 0.15)
+startBtn.Position = UDim2.fromScale(0.5, 0.97)
+startBtn.AnchorPoint = Vector2.new(0.5, 1)
+startBtn.BackgroundColor3 = Color3.fromRGB(40, 150, 80)
+startBtn.Text = "Kiske muh me dena🤔"
+startBtn.TextColor3 = Color3.new(1, 1, 1)
+startBtn.Font = Enum.Font.GothamBold
+startBtn.TextScaled = true
+Instance.new("UICorner", startBtn).CornerRadius = UDim.new(0, 4)
+
+local openBtn = Instance.new("TextButton", gui) -- Kept in ScreenGui directly
+openBtn.Size = UDim2.fromScale(0.05,0.1)
+openBtn.Position = UDim2.fromScale(0.2,0.5)
+openBtn.AnchorPoint = Vector2.new(0, 0)
+openBtn.BackgroundColor3 = Color3.fromRGB(1,1,1)
+openBtn.Text = "🥵"
+openBtn.Font = Enum.Font.GothamBold
+openBtn.TextScaled = true
+openBtn.Visible = false
+Instance.new("UICorner", openBtn).CornerRadius = UDim.new(1,0)
+Instance.new("UIAspectRatioConstraint", reopenBtn).AspectRatio = 1
+
+-- --- DRAG system ---
+local function makeDraggable(obj, handle)
+    local dragging, dragStart, startPos
+    handle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = obj.Position
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStart
+            obj.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+end
+makeDraggable(mainFrame, header)
+makeDraggable(openBtn, openBtn)
+
+-- --- server player list ---
+local function populate()
+    for _, v in pairs(list:GetChildren()) do if v:IsA("TextButton") then v:Destroy() end end
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= lp then
+            local btn = Instance.new("TextButton", list)
+            btn.Size = UDim2.fromScale(0.87,0.13)
+            
+            btn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+            btn.Text = "  " .. plr.Name
+            btn.TextColor3 = Color3.new(1, 1, 1)
+            btn.Font = Enum.Font.Gotham
+            btn.TextScaled = true
+            btn.TextXAlignment = Enum.TextXAlignment.Center
+            Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 6)
+            
+            btn.MouseButton1Click:Connect(function()
+                selectedPlayer = plr
+                startBtn.Text = "START → " .. plr.Name
+                for _, b in pairs(list:GetChildren()) do if b:IsA("TextButton") then b.BackgroundColor3 = Color3.fromRGB(45, 45, 45) end end
+                btn.BackgroundColor3 = Color3.fromRGB(70, 70, 150)
+            end)
+        end
+    end
+end
+populate()
+Players.PlayerAdded:Connect(populate)
+Players.PlayerRemoving:Connect(populate)
+
+-- --- button functionality ---
+closeBtn.MouseButton1Click:Connect(function() mainFrame.Visible = false; openBtn.Visible = true end)
+openBtn.MouseButton1Click:Connect(function() mainFrame.Visible = true; openBtn.Visible = false end)
+destroy.MouseButton1Click:Connect(function() gui:Destroy() end) -- Fully kills the GUI cleanly
+
+startBtn.MouseButton1Click:Connect(function()
+    if not selectedPlayer then return end
+    running = not running
+    
+    if running then
+        startBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+        startBtn.Text = "Nikal gya 😩💦"
+        toggleEmote(true)
+    else
+        toggleEmote(false)
+        startBtn.BackgroundColor3 = Color3.fromRGB(40, 150, 80)
+        startBtn.Text = "Isko?🤔 → " .. selectedPlayer.Name
+    end
+end)
+
+-- --- Teleportation Loop ---
+RunService.PostSimulation:Connect(function()
+    if running and selectedPlayer and selectedPlayer.Character and root then
+        local tChar = selectedPlayer.Character
+        local tHead = tChar:FindFirstChild("Head")
+        local tHum = tChar:FindFirstChild("Humanoid")
+        
+        if tHead and tHum then
+            local headOffset = (tHum.RigType == Enum.HumanoidRigType.R15) and 0.5 or 0.3
+            root.CFrame = tHead.CFrame * CFrame.new(0, headOffset, -1) * CFrame.Angles(0, math.pi, 0)
+            
+            root.AssemblyLinearVelocity = Vector3.zero
+            root.AssemblyAngularVelocity = Vector3.zero
+        end
+    end
+end)
