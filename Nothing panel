@@ -414,6 +414,7 @@ for _, data in ipairs(buttonsData) do
         end)
     end
 end)
+end
 
 --=========================================
 -- 8. GLOBAL BUTTON SOUNDS & LOGIC
