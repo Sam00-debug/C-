@@ -358,27 +358,21 @@ KeyFrame.Visible = true -- Reveal Key System after intro
 --=========================================
 -- 7. PAYLOAD BUTTON POPULATION
 --=========================================
-local listURL = "https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Link%20list" 
 local buttonsData = {}
 
--- Safely attempt to load the list from the web
+-- URL to the raw file containing your "return { ... }" list
+local listUrl = "https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Link%20list" 
+
+-- Use pcall to prevent the whole script from breaking if the link goes down
 local success, result = pcall(function()
-    return loadstring(game:HttpGet(listURL))()
+    return loadstring(game:HttpGet(listUrl))()
 end)
 
 if success and type(result) == "table" then
     buttonsData = result
 else
-    warn("Failed to load button list! Using fallback.")
-    -- Optional: You can put a small fallback list here just in case
-    buttonsData = {
-        {
-    {"informationℹ️", "https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Information"},
-
-}
+    warn("Nothing Panel: Failed to load button list. Error: " .. tostring(result))
 end
-
-
 
 
 for _, data in ipairs(buttonsData) do
