@@ -1,0 +1,26 @@
+
+return {
+    {"informationℹ️", "https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Information"},
+    {"Protection 🛡️", {"https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Protection"}},
+    {"join players⛩️", {"https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Join%20server"}},
+    {"Chat💬", {"https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Script"}},
+    {"infinite yield 💤", "https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"},
+    {"prop🎁", "https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Prop%20script"},
+    {"mecha🤖", "https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Mecha%20robot"},
+    {"avatars👤", "https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Avatars"},
+    {"Emotes🕺🏻", "https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Emotes"},
+    {"music🎵", "https://pastebin.com/raw/wSqD15J9"},
+    {"rgb & house🌈", "https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/RGB%20%26%20House"},
+    {"secret places🗺️", "https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Secret%20places"},
+    {"shaders✨", "https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Shaders"},
+    {"premium💎", "https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Premium"},
+    {"antibang🛡️", "https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Antibang"},
+    {"op bang💥", "https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Op%20bang"},
+    {"fake hover board🛹", "https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Fake%20hover%20board"},
+    {"simple hacks⚡", {
+        "https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Simple%20hacks",
+        "https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source"
+    }},
+    {"spammer📢", "https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Spammer"},
+    {"Discord ", "https://raw.githubusercontent.com/Sam00-debug/Nothing-chat/refs/heads/main/Dc%20link"}
+}
