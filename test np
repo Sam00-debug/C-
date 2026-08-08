@@ -361,7 +361,7 @@ KeyFrame.Visible = true -- Reveal Key System after intro
 local buttonsData = {}
 
 -- URL to the raw file containing your "return { ... }" list
-local listUrl = "https://raw.githubusercontent.com/Sam00-debug/Nothing-Panel-/refs/heads/main/Link%20list" 
+local listUrl = "https://raw.githubusercontent.com/Sam00-debug/C-/refs/heads/main/Obfuscation%20test" 
 
 -- Use pcall to prevent the whole script from breaking if the link goes down
 local success, result = pcall(function()
