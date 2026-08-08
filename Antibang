@@ -7,7 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StarterGui = game:GetService("StarterGui")
 local Debris = game:GetService("Debris")
 
---hy
+
 
 local player = Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
