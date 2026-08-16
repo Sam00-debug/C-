@@ -1,0 +1,549 @@
+-- // Services
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local TextChatService = game:GetService("TextChatService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CoreGui = game:GetService("CoreGui")
+local Camera = workspace.CurrentCamera
+
+local LocalPlayer = Players.LocalPlayer
+
+-- // Chat Function with Debounce & Anti-Spam Guard
+local lastCommandTime = 0
+local lastCommandSent = ""
+
+local function sendCommand(message)
+	if message == lastCommandSent and tick() - lastCommandTime < 0.5 then return end
+	if tick() - lastCommandTime < 0.25 then return end 
+	
+	lastCommandTime = tick()
+	lastCommandSent = message
+	
+	if TextChatService.ChatVersion == Enum.ChatVersion.TextChatService then
+		local RBXGeneral = TextChatService.TextChannels:FindFirstChild("RBXGeneral")
+		if RBXGeneral then
+			RBXGeneral:SendAsync(message)
+		end
+	else
+		local ChatEvents = ReplicatedStorage:FindFirstChild("DefaultChatSystemChatEvents")
+		if ChatEvents then
+			local SayMessageRequest = ChatEvents:FindFirstChild("SayMessageRequest")
+			if SayMessageRequest then
+				SayMessageRequest:FireServer(message, "All")
+			end
+		end
+	end
+end
+
+-- // ScreenGui Setup
+local guiName = "SecretPlaceUI"
+local oldGui = CoreGui:FindFirstChild(guiName) or LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild(guiName)
+if oldGui then oldGui:Destroy() end
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = guiName
+ScreenGui.ResetOnSpawn = false
+local success = pcall(function() ScreenGui.Parent = CoreGui end)
+if not success then ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
+
+-- // Text Scaling Helper
+local function ApplyTextScaling(element, maxSize)
+	element.TextScaled = true
+	local constraint = Instance.new("UITextSizeConstraint")
+	constraint.MaxTextSize = maxSize
+	constraint.Parent = element
+end
+
+-- // Reopen Button
+local OpenButton = Instance.new("TextButton")
+OpenButton.Name = "ReopenButton"
+OpenButton.Size = UDim2.new(0, 45, 0, 45)
+OpenButton.Position = UDim2.new(0, 15, 0.5, -22)
+OpenButton.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+OpenButton.Text = "⚡"
+OpenButton.TextColor3 = Color3.fromRGB(100, 220, 120)
+OpenButton.Font = Enum.Font.GothamBold
+OpenButton.BorderSizePixel = 0
+OpenButton.Visible = false
+OpenButton.Parent = ScreenGui
+ApplyTextScaling(OpenButton, 22)
+
+local OpenUICorner = Instance.new("UICorner")
+OpenUICorner.CornerRadius = UDim.new(0.3, 0)
+OpenUICorner.Parent = OpenButton
+
+local OpenUIStroke = Instance.new("UIStroke")
+OpenUIStroke.Color = Color3.fromRGB(60, 60, 70)
+OpenUIStroke.Thickness = 1.5
+OpenUIStroke.Parent = OpenButton
+
+-- // Main Frame
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0.9, 0, 0.85, 0) 
+MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0) 
+MainFrame.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
+MainFrame.BorderSizePixel = 0
+MainFrame.Parent = ScreenGui
+
+local SizeConstraint = Instance.new("UISizeConstraint")
+SizeConstraint.MaxSize = Vector2.new(520, 580)
+SizeConstraint.MinSize = Vector2.new(320, 400)
+SizeConstraint.Parent = MainFrame
+
+local MainUICorner = Instance.new("UICorner")
+MainUICorner.CornerRadius = UDim.new(0.03, 0)
+MainUICorner.Parent = MainFrame
+
+local MainUIStroke = Instance.new("UIStroke")
+MainUIStroke.Color = Color3.fromRGB(45, 45, 55)
+MainUIStroke.Thickness = 1.5
+MainUIStroke.Parent = MainFrame
+
+-- // Topbar
+local Topbar = Instance.new("Frame")
+Topbar.Size = UDim2.new(1, 0, 0, 45)
+Topbar.BackgroundColor3 = Color3.fromRGB(24, 24, 30)
+Topbar.BorderSizePixel = 0
+Topbar.Parent = MainFrame
+
+local TopbarUICorner = Instance.new("UICorner")
+TopbarUICorner.CornerRadius = UDim.new(0.2, 0)
+TopbarUICorner.Parent = Topbar
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(0.5, 0, 1, 0)
+Title.Position = UDim2.new(0.04, 0, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "Command Control"
+Title.TextColor3 = Color3.fromRGB(240, 240, 245)
+Title.Font = Enum.Font.GothamBold
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = Topbar
+ApplyTextScaling(Title, 18)
+
+local MinButton = Instance.new("TextButton")
+MinButton.Size = UDim2.new(0, 32, 0, 32)
+MinButton.Position = UDim2.new(1, -72, 0.5, -16)
+MinButton.BackgroundColor3 = Color3.fromRGB(35, 35, 42)
+MinButton.Text = "-"
+MinButton.TextColor3 = Color3.fromRGB(200, 200, 210)
+MinButton.Font = Enum.Font.GothamBold
+MinButton.BorderSizePixel = 0
+MinButton.Parent = Topbar
+ApplyTextScaling(MinButton, 18)
+
+local MinCorner = Instance.new("UICorner")
+MinCorner.CornerRadius = UDim.new(0.25, 0)
+MinCorner.Parent = MinButton
+
+local CloseButton = Instance.new("TextButton")
+CloseButton.Size = UDim2.new(0, 32, 0, 32)
+CloseButton.Position = UDim2.new(1, -36, 0.5, -16)
+CloseButton.BackgroundColor3 = Color3.fromRGB(220, 60, 60)
+CloseButton.Text = "✕"
+CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseButton.Font = Enum.Font.GothamBold
+CloseButton.BorderSizePixel = 0
+CloseButton.Parent = Topbar
+ApplyTextScaling(CloseButton, 14)
+
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(0.25, 0)
+CloseCorner.Parent = CloseButton
+
+-- // Dragging Logic
+local dragging, dragInput, dragStart, startPos
+Topbar.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPos = MainFrame.Position
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then dragging = false end
+		end)
+	end
+end)
+Topbar.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+		dragInput = input
+	end
+end)
+UserInputService.InputChanged:Connect(function(input)
+	if input == dragInput and dragging then
+		local delta = input.Position - dragStart
+		local viewport = Camera.ViewportSize
+		MainFrame.Position = UDim2.new(startPos.X.Scale + (delta.X / viewport.X), 0, startPos.Y.Scale + (delta.Y / viewport.Y), 0)
+	end
+end)
+
+MinButton.MouseButton1Click:Connect(function()
+	MainFrame.Visible = false
+	OpenButton.Visible = true
+end)
+
+OpenButton.MouseButton1Click:Connect(function()
+	MainFrame.Visible = true
+	OpenButton.Visible = false
+end)
+
+CloseButton.MouseButton1Click:Connect(function()
+	ScreenGui:Destroy()
+end)
+
+-- // Scrolling Frame
+local ScrollFrame = Instance.new("ScrollingFrame")
+ScrollFrame.Size = UDim2.new(1, -20, 1, -55)
+ScrollFrame.Position = UDim2.new(0, 10, 0, 50)
+ScrollFrame.BackgroundTransparency = 1
+ScrollFrame.ScrollBarThickness = 4
+ScrollFrame.ScrollBarImageColor3 = Color3.fromRGB(80, 80, 95)
+ScrollFrame.BorderSizePixel = 0
+ScrollFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+ScrollFrame.Parent = MainFrame
+
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
+UIListLayout.Padding = UDim.new(0, 10) 
+UIListLayout.Parent = ScrollFrame
+
+local UIPadding = Instance.new("UIPadding")
+UIPadding.PaddingTop = UDim.new(0, 5)
+UIPadding.PaddingBottom = UDim.new(0, 20)
+UIPadding.PaddingLeft = UDim.new(0, 5)
+UIPadding.PaddingRight = UDim.new(0, 10)
+UIPadding.Parent = ScrollFrame
+
+-- Global Target Selector variable
+local selectedTargetPlayer = "All"
+
+-- // Element Builders
+
+local function CreateSectionHeader(titleText)
+	local Header = Instance.new("TextLabel")
+	Header.Size = UDim2.new(1, 0, 0, 24)
+	Header.BackgroundTransparency = 1
+	Header.Text = titleText:upper()
+	Header.TextColor3 = Color3.fromRGB(120, 120, 140)
+	Header.Font = Enum.Font.GothamBold
+	Header.TextXAlignment = Enum.TextXAlignment.Left
+	Header.Parent = ScrollFrame
+	ApplyTextScaling(Header, 12)
+end
+
+-- Slider Component (Fires command ONLY when user releases drag)
+local function CreateSlider(commandName, minVal, maxVal, defaultVal)
+	local Container = Instance.new("Frame")
+	Container.Size = UDim2.new(1, 0, 0, 50)
+	Container.BackgroundColor3 = Color3.fromRGB(26, 26, 32)
+	Container.BorderSizePixel = 0
+	Container.Parent = ScrollFrame
+
+	local Corner = Instance.new("UICorner")
+	Corner.CornerRadius = UDim.new(0.18, 0)
+	Corner.Parent = Container
+
+	local TitleLabel = Instance.new("TextLabel")
+	TitleLabel.Size = UDim2.new(0.6, 0, 0, 20)
+	TitleLabel.Position = UDim2.new(0.04, 0, 0.12, 0)
+	TitleLabel.BackgroundTransparency = 1
+	TitleLabel.Text = commandName:sub(1,1):upper() .. commandName:sub(2)
+	TitleLabel.TextColor3 = Color3.fromRGB(220, 220, 230)
+	TitleLabel.Font = Enum.Font.GothamSemibold
+	TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+	TitleLabel.Parent = Container
+	ApplyTextScaling(TitleLabel, 13)
+
+	local ValueLabel = Instance.new("TextLabel")
+	ValueLabel.Size = UDim2.new(0.3, 0, 0, 20)
+	ValueLabel.Position = UDim2.new(0.66, 0, 0.12, 0)
+	ValueLabel.BackgroundTransparency = 1
+	ValueLabel.Text = tostring(defaultVal)
+	ValueLabel.TextColor3 = Color3.fromRGB(100, 220, 120)
+	ValueLabel.Font = Enum.Font.GothamBold
+	ValueLabel.TextXAlignment = Enum.TextXAlignment.Right
+	ValueLabel.Parent = Container
+	ApplyTextScaling(ValueLabel, 13)
+
+	local Track = Instance.new("Frame")
+	Track.Size = UDim2.new(0.92, 0, 0, 6)
+	Track.Position = UDim2.new(0.04, 0, 0.68, 0)
+	Track.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+	Track.BorderSizePixel = 0
+	Track.Parent = Container
+
+	local TrackCorner = Instance.new("UICorner")
+	TrackCorner.CornerRadius = UDim.new(1, 0)
+	TrackCorner.Parent = Track
+
+	local Fill = Instance.new("Frame")
+	local initialScale = math.clamp((defaultVal - minVal) / (maxVal - minVal), 0, 1)
+	Fill.Size = UDim2.new(initialScale, 0, 1, 0)
+	Fill.BackgroundColor3 = Color3.fromRGB(100, 220, 120)
+	Fill.BorderSizePixel = 0
+	Fill.Parent = Track
+
+	local FillCorner = Instance.new("UICorner")
+	FillCorner.CornerRadius = UDim.new(1, 0)
+	FillCorner.Parent = Fill
+
+	local isDragging = false
+
+	local function UpdateSlider(input)
+		local posX = math.clamp((input.Position.X - Track.AbsolutePosition.X) / Track.AbsoluteSize.X, 0, 1)
+		Fill.Size = UDim2.new(posX, 0, 1, 0)
+		local currentVal = math.floor(minVal + (maxVal - minVal) * posX)
+		ValueLabel.Text = tostring(currentVal)
+		return currentVal
+	end
+
+	Container.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			isDragging = true
+			UpdateSlider(input)
+		end
+	end)
+
+	UserInputService.InputChanged:Connect(function(input)
+		if isDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+			UpdateSlider(input)
+		end
+	end)
+
+	UserInputService.InputEnded:Connect(function(input)
+		if isDragging and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+			isDragging = false
+			local finalVal = tonumber(ValueLabel.Text)
+			sendCommand(";" .. commandName:lower() .. " " .. tostring(finalVal))
+		end
+	end)
+end
+
+-- Modern Toggle Button
+local function CreateSimpleToggle(commandName, onOverride, offOverride)
+	local ToggleBtn = Instance.new("TextButton")
+	ToggleBtn.Size = UDim2.new(1, 0, 0, 42)
+	ToggleBtn.BackgroundColor3 = Color3.fromRGB(26, 26, 32)
+	ToggleBtn.Text = ""
+	ToggleBtn.BorderSizePixel = 0
+	ToggleBtn.Parent = ScrollFrame
+
+	local ToggleCorner = Instance.new("UICorner")
+	ToggleCorner.CornerRadius = UDim.new(0.2, 0)
+	ToggleCorner.Parent = ToggleBtn
+
+	local Label = Instance.new("TextLabel")
+	Label.Size = UDim2.new(0.7, 0, 1, 0)
+	Label.Position = UDim2.new(0.04, 0, 0, 0)
+	Label.BackgroundTransparency = 1
+	Label.Text = commandName:sub(1,1):upper() .. commandName:sub(2)
+	Label.TextColor3 = Color3.fromRGB(220, 220, 230)
+	Label.Font = Enum.Font.GothamSemibold
+	Label.TextXAlignment = Enum.TextXAlignment.Left
+	Label.Parent = ToggleBtn
+	ApplyTextScaling(Label, 14)
+
+	local StatusBadge = Instance.new("Frame")
+	StatusBadge.Size = UDim2.new(0, 50, 0, 22)
+	StatusBadge.Position = UDim2.new(1, -60, 0.5, -11)
+	StatusBadge.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+	StatusBadge.BorderSizePixel = 0
+	StatusBadge.Parent = ToggleBtn
+
+	local BadgeCorner = Instance.new("UICorner")
+	BadgeCorner.CornerRadius = UDim.new(0.4, 0)
+	BadgeCorner.Parent = StatusBadge
+
+	local StatusText = Instance.new("TextLabel")
+	StatusText.Size = UDim2.new(1, 0, 1, 0)
+	StatusText.BackgroundTransparency = 1
+	StatusText.Text = "OFF"
+	StatusText.TextColor3 = Color3.fromRGB(150, 150, 160)
+	StatusText.Font = Enum.Font.GothamBold
+	StatusText.Parent = StatusBadge
+	ApplyTextScaling(StatusText, 11)
+
+	local toggled = false
+	ToggleBtn.MouseButton1Click:Connect(function()
+		toggled = not toggled
+		if toggled then
+			StatusBadge.BackgroundColor3 = Color3.fromRGB(40, 160, 80)
+			StatusText.Text = "ON"
+			StatusText.TextColor3 = Color3.fromRGB(255, 255, 255)
+			sendCommand(";" .. (onOverride or commandName:lower()))
+		else
+			StatusBadge.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+			StatusText.Text = "OFF"
+			StatusText.TextColor3 = Color3.fromRGB(150, 150, 160)
+			
+			if offOverride then
+				sendCommand(";" .. offOverride)
+			else
+				sendCommand(";un" .. commandName:lower())
+			end
+		end
+	end)
+end
+
+-- Toggle with Value Input (e.g. Spin)
+local function CreateToggleWithInput(commandName)
+	local Container = Instance.new("Frame")
+	Container.Size = UDim2.new(1, 0, 0, 42)
+	Container.BackgroundColor3 = Color3.fromRGB(26, 26, 32)
+	Container.BorderSizePixel = 0
+	Container.Parent = ScrollFrame
+
+	local Corner = Instance.new("UICorner")
+	Corner.CornerRadius = UDim.new(0.2, 0)
+	Corner.Parent = Container
+
+	local ToggleBtn = Instance.new("TextButton")
+	ToggleBtn.Size = UDim2.new(0.65, 0, 1, 0)
+	ToggleBtn.BackgroundTransparency = 1
+	ToggleBtn.Text = "  " .. commandName:sub(1,1):upper() .. commandName:sub(2) .. " [OFF]"
+	ToggleBtn.TextColor3 = Color3.fromRGB(220, 220, 230)
+	ToggleBtn.Font = Enum.Font.GothamSemibold
+	ToggleBtn.TextXAlignment = Enum.TextXAlignment.Left
+	ToggleBtn.Parent = Container
+	ApplyTextScaling(ToggleBtn, 14)
+
+	local InputBox = Instance.new("TextBox")
+	InputBox.Size = UDim2.new(0.28, 0, 0.65, 0)
+	InputBox.Position = UDim2.new(0.68, 0, 0.175, 0)
+	InputBox.BackgroundColor3 = Color3.fromRGB(36, 36, 45)
+	InputBox.TextColor3 = Color3.fromRGB(240, 240, 250)
+	InputBox.PlaceholderText = "Speed"
+	InputBox.Text = ""
+	InputBox.Font = Enum.Font.Gotham
+	InputBox.BorderSizePixel = 0
+	InputBox.Parent = Container
+	ApplyTextScaling(InputBox, 12)
+
+	local InputCorner = Instance.new("UICorner")
+	InputCorner.CornerRadius = UDim.new(0.2, 0)
+	InputCorner.Parent = InputBox
+
+	local toggled = false
+	ToggleBtn.MouseButton1Click:Connect(function()
+		toggled = not toggled
+		if toggled then
+			ToggleBtn.Text = "  " .. commandName:sub(1,1):upper() .. commandName:sub(2) .. " [ON]"
+			ToggleBtn.TextColor3 = Color3.fromRGB(100, 220, 120)
+			local val = InputBox.Text ~= "" and InputBox.Text or "100"
+			sendCommand(";" .. commandName:lower() .. " " .. val)
+		else
+			ToggleBtn.Text = "  " .. commandName:sub(1,1):upper() .. commandName:sub(2) .. " [OFF]"
+			ToggleBtn.TextColor3 = Color3.fromRGB(220, 220, 230)
+			sendCommand(";un" .. commandName:lower())
+		end
+	end)
+end
+
+-- Target System Component
+local function CreateTargetSelector()
+	local Container = Instance.new("Frame")
+	Container.Size = UDim2.new(1, 0, 0, 42)
+	Container.BackgroundColor3 = Color3.fromRGB(26, 26, 32)
+	Container.BorderSizePixel = 0
+	Container.Parent = ScrollFrame
+
+	local Corner = Instance.new("UICorner")
+	Corner.CornerRadius = UDim.new(0.2, 0)
+	Corner.Parent = Container
+	
+	local InputBox = Instance.new("TextBox")
+	InputBox.Size = UDim2.new(0.92, 0, 0.8, 0)
+	InputBox.Position = UDim2.new(0.04, 0, 0.1, 0)
+	InputBox.BackgroundTransparency = 1
+	InputBox.TextColor3 = Color3.fromRGB(100, 220, 120)
+	InputBox.PlaceholderText = "Target Player Name..."
+	InputBox.Text = selectedTargetPlayer
+	InputBox.Font = Enum.Font.GothamBold
+	InputBox.TextXAlignment = Enum.TextXAlignment.Left
+	InputBox.Parent = Container
+	ApplyTextScaling(InputBox, 14)
+	
+	InputBox.FocusLost:Connect(function()
+		if InputBox.Text ~= "" then
+			selectedTargetPlayer = InputBox.Text
+		else
+			InputBox.Text = "All"
+			selectedTargetPlayer = "All"
+		end
+	end)
+end
+
+local function CreatePlayerAction(commandName, customPrefix)
+	local ActionBtn = Instance.new("TextButton")
+	ActionBtn.Size = UDim2.new(1, 0, 0, 38)
+	ActionBtn.BackgroundColor3 = Color3.fromRGB(32, 32, 40)
+	ActionBtn.Text = commandName:upper()
+	ActionBtn.TextColor3 = Color3.fromRGB(220, 220, 230)
+	ActionBtn.Font = Enum.Font.GothamBold
+	ActionBtn.BorderSizePixel = 0
+	ActionBtn.Parent = ScrollFrame
+	ApplyTextScaling(ActionBtn, 13)
+
+	local BtnCorner = Instance.new("UICorner")
+	BtnCorner.CornerRadius = UDim.new(0.2, 0)
+	BtnCorner.Parent = ActionBtn
+
+	ActionBtn.MouseButton1Click:Connect(function()
+		local prefix = customPrefix or commandName:lower()
+		sendCommand(";" .. prefix .. " " .. selectedTargetPlayer)
+	end)
+end
+
+-- // --- POPULATE SECTIONS --- //
+
+-- SECTION 1: SLIDERS
+CreateSectionHeader("Movement Sliders")
+CreateSlider("speed", 16, 300, 16)
+CreateSlider("jumppower", 50, 400, 50)
+CreateSlider("gravity", 0, 196, 196)
+CreateSlider("vehiclespeed", 50, 500, 50)
+
+-- SECTION 2: TOGGLES
+CreateSectionHeader("Abilities & Toggles")
+CreateSimpleToggle("fly")
+CreateSimpleToggle("vehiclefly")
+CreateToggleWithInput("spin")
+CreateSimpleToggle("noclip")
+CreateSimpleToggle("nosit")
+CreateSimpleToggle("invisible", "invisible", "visible")
+CreateSimpleToggle("platform")
+CreateSimpleToggle("swim")
+CreateSimpleToggle("infinitejump", "infinitejump", "uninfinitejump")
+CreateSimpleToggle("ctrllock", "ctrllock", "unctrllock")
+
+-- SECTION 3: TARGETING
+CreateSectionHeader("Target System")
+CreateTargetSelector()
+CreatePlayerAction("Teleport", "to")
+CreatePlayerAction("View", "view")
+CreatePlayerAction("Locate", "locate")
+CreatePlayerAction("Headsit", "headsit")
+CreatePlayerAction("Follow", "follow")
+CreatePlayerAction("Orbit", "orbit")
+
+-- SECTION 4: RESET ACTION (Bottom)
+CreateSectionHeader("Actions")
+
+local ResetBtn = Instance.new("TextButton")
+ResetBtn.Size = UDim2.new(1, 0, 0, 44)
+ResetBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+ResetBtn.Text = "RESET CHARACTER"
+ResetBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+ResetBtn.Font = Enum.Font.GothamBold
+ResetBtn.BorderSizePixel = 0
+ResetBtn.Parent = ScrollFrame
+ApplyTextScaling(ResetBtn, 14)
+
+local ResetCorner = Instance.new("UICorner")
+ResetCorner.CornerRadius = UDim.new(0.2, 0)
+ResetCorner.Parent = ResetBtn
+
+ResetBtn.MouseButton1Click:Connect(function()
+	sendCommand(";reset")
+end)
