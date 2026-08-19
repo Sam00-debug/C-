@@ -249,23 +249,7 @@ local words = {
 }
 
 
-for _, emoji in ipairs(words) do
-    table.insert(words, words)
-end
 
--- Fisher-Yates shuffle
-local function shuffle(t)
-    for i = #t, 2, -1 do
-        local j = math.random(i)
-        t[i], t[j] = t[j], t[i]
-    end
-end
-
--- Seed randomization
-math.randomseed(os.time())
-
--- Shuffle the complete list
-shuffle(words)
 
 
 local actions = {
