@@ -364,8 +364,8 @@ task.spawn(function()
 local pattern = patterns[math.random(1, #patterns)]
 local dynamicBorder = string.rep(
     pattern,
-    math.ceil(200 / #pattern)
-):sub(1, 200)
+    math.ceil(100 / #pattern)
+):sub(1, 100)
             local waitTime =
                 tonumber(delayInput.Text) or 1
 
