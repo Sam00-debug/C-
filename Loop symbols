@@ -254,9 +254,7 @@ local words = {
 
 local actions = {
     "Tmx , ",
-    "Tri ,b3hh3n me",
-"Tri gef me",
-"Terme"
+    "Tri ,b3hh3n me"
    
 
 }
