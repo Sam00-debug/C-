@@ -1,0 +1,518 @@
+-- !strict
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local CoreGui = game:GetService("CoreGui")
+local StarterGui = game:GetService("StarterGui")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Debris = game:GetService("Debris")
+
+local lp = Players.LocalPlayer
+local activeTracking = false
+local hideAvatarEnabled = false
+local rgbMode = "OFF"
+local trackingConnection: RBXScriptConnection? = nil
+
+local character = lp.Character or lp.CharacterAdded:Wait()
+local hum = character:WaitForChild("Humanoid")
+
+local defaultUserHipHeight = hum.HipHeight
+
+-- --- ANACONDA CONFIGURATION & VARIABLES ---
+local SCALE_MULTIPLIER = 11
+local PROP_ROTATION_X = 0
+local PROP_ROTATION_Y = 0     
+local PROP_ROTATION_Z = 0     
+
+local propsCache: { [number]: Model } = {}
+local segmentCFrames: { [number]: CFrame } = {} 
+local targetCFrames: { [number]: CFrame } = {} 
+
+local pathHistory: { CFrame } = {}
+local RECORD_RESOLUTION = 0.4 
+local MAX_HISTORY_LENGTH = 350 
+
+local function playClickSound()
+    local s = Instance.new("Sound")
+    s.SoundId = "rbxassetid://876939830"
+    s.Parent = CoreGui
+    s:Play()
+    Debris:AddItem(s, 2)
+end
+
+local function updatePropsCache()
+    table.clear(propsCache)
+    local workspaceCom = workspace:FindFirstChild("WorkspaceCom")
+    if workspaceCom then
+        for _, folder in ipairs(workspaceCom:GetChildren()) do
+            for _, child in ipairs(folder:GetChildren()) do
+                if child.Name:sub(1, 4) == "Prop" and child.Name:find(lp.Name) then
+                    table.insert(propsCache, child)
+                end
+            end
+        end
+    end
+end
+
+local function setAvatarVisibility(visible: boolean)
+    local char = lp.Character
+    if not char then return end
+    for _, desc in pairs(char:GetDescendants()) do
+        if desc:IsA("BasePart") and desc.Name ~= "HumanoidRootPart" then
+            desc.LocalTransparencyModifier = visible and 0 or 1
+        elseif desc:IsA("Decal") then
+            desc.LocalTransparencyModifier = visible and 0 or 1
+        end
+    end
+end
+
+StarterGui:SetCore("SendNotification", {Title="Anaconda Logic 🐍", Text="Pathfinding Serpentine Motion initialized!", Duration=10})
+
+-- --- PROFESSIONAL UI DESIGN ---
+local gui = Instance.new("ScreenGui", CoreGui)
+gui.Name = "AnacondaMechaUI"
+gui.ResetOnSpawn = false
+
+local mainFrame = Instance.new("Frame", gui)
+mainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+mainFrame.Size = UDim2.fromScale(0.35, 0.6)
+mainFrame.Position = UDim2.fromScale(0.5, 0.5)
+mainFrame.BackgroundColor3 = Color3.fromRGB(15, 25, 15)
+mainFrame.ClipsDescendants = true
+Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0.03, 0)
+
+-- Draggable Logic
+local dragging, dragStart, startPos
+mainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true; dragStart = input.Position; startPos = mainFrame.Position
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
+end)
+
+-- Top Bar
+local topBar = Instance.new("Frame", mainFrame)
+topBar.Size = UDim2.fromScale(1, 0.2)
+topBar.BackgroundColor3 = Color3.fromRGB(20, 35, 20)
+Instance.new("UICorner", topBar).CornerRadius = UDim.new(0.2, 0)
+local bottomCover = Instance.new("Frame", topBar)
+bottomCover.Size = UDim2.fromScale(1, 0.5)
+bottomCover.Position = UDim2.fromScale(0, 0.5)
+bottomCover.BackgroundColor3 = Color3.fromRGB(20, 35, 20)
+bottomCover.BorderSizePixel = 0
+
+local mainTitle = Instance.new("TextLabel", topBar)
+mainTitle.Size = UDim2.fromScale(0.8, 1)
+mainTitle.Position = UDim2.fromScale(0.05, 0)
+mainTitle.BackgroundTransparency = 1
+mainTitle.Text = "Anaconda Path 🐍"
+mainTitle.TextColor3 = Color3.fromRGB(150, 255, 150)
+mainTitle.Font = Enum.Font.GothamBold
+mainTitle.TextScaled = true
+mainTitle.TextXAlignment = Enum.TextXAlignment.Left
+
+local minimizeBtn = Instance.new("TextButton", topBar)
+minimizeBtn.Size = UDim2.fromScale(0.1, 0.7)
+minimizeBtn.Position = UDim2.fromScale(0.75, 0.15)
+minimizeBtn.BackgroundColor3 = Color3.fromRGB(40, 60, 40)
+minimizeBtn.Text = "-"
+minimizeBtn.TextColor3 = Color3.fromRGB(255,255,255)
+minimizeBtn.Font = Enum.Font.GothamBold
+minimizeBtn.TextScaled = true
+Instance.new("UICorner", minimizeBtn).CornerRadius = UDim.new(0.2, 0)
+
+local mainCloseBtn = Instance.new("TextButton", topBar)
+mainCloseBtn.Size = UDim2.fromScale(0.1, 0.7)
+mainCloseBtn.Position = UDim2.fromScale(0.87, 0.15)
+mainCloseBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+mainCloseBtn.Text = "X"
+mainCloseBtn.TextColor3 = Color3.fromRGB(255,255,255)
+mainCloseBtn.Font = Enum.Font.GothamBold
+mainCloseBtn.TextScaled = true
+Instance.new("UICorner", mainCloseBtn).CornerRadius = UDim.new(0.2, 0)
+
+local reopenBtn = Instance.new("TextButton", gui)
+reopenBtn.Size = UDim2.fromScale(0.05, 0.35)
+reopenBtn.Position = UDim2.fromScale(0.1, 0.5)
+reopenBtn.BackgroundColor3 = Color3.fromRGB(20, 35, 20)
+reopenBtn.Text = "🐍"
+reopenBtn.TextScaled = true
+reopenBtn.Visible = false
+Instance.new("UICorner", reopenBtn).CornerRadius = UDim.new(1,0)
+Instance.new("UIAspectRatioConstraint", reopenBtn).AspectRatio = 1
+
+local reopenDragging, reopenDragStart, reopenStartPos
+reopenBtn.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        reopenDragging = true; reopenDragStart = input.Position; reopenStartPos = reopenBtn.Position
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if reopenDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - reopenDragStart
+        reopenBtn.Position = UDim2.new(reopenStartPos.X.Scale, reopenStartPos.X.Offset + delta.X, reopenStartPos.Y.Scale, reopenStartPos.Y.Offset + delta.Y)
+    end
+end)
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then reopenDragging = false end
+end)
+
+-- Main Menu Containers
+local menuScroll = Instance.new("ScrollingFrame", mainFrame)
+menuScroll.Size = UDim2.fromScale(0.95, 0.8)
+menuScroll.Position = UDim2.fromScale(0, 0.2)
+menuScroll.BackgroundTransparency = 1
+menuScroll.ScrollBarThickness = 4
+menuScroll.Parent = mainFrame
+menuScroll.CanvasSize = UDim2.fromScale(0, 2)
+
+local menuLayout = Instance.new("UIListLayout", menuScroll)
+menuLayout.SortOrder = Enum.SortOrder.LayoutOrder
+menuLayout.Padding = UDim.new(0.04, 0)
+menuLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+local function createButton(parent, text, isToggle, callback)
+    local btn = Instance.new("TextButton", parent)
+    btn.Size = UDim2.fromScale(0.9, 0.08)
+    btn.BackgroundColor3 = Color3.fromRGB(35, 45, 35)
+    btn.Text = isToggle and text.." : OFF" or text
+    btn.TextColor3 = Color3.fromRGB(220,220,220)
+    btn.Font = Enum.Font.GothamSemibold
+    btn.TextScaled = true
+    Instance.new("UICorner",btn).CornerRadius = UDim.new(0.2, 0)
+    local padding = Instance.new("UIPadding", btn)
+    padding.PaddingTop = UDim.new(0.2,0)
+    padding.PaddingBottom = UDim.new(0.2,0)
+
+    local state = false
+    btn.MouseButton1Click:Connect(function()
+        playClickSound()
+        if isToggle then
+            state = not state
+            btn.Text = text .. (state and " : ON" or " : OFF")
+            btn.BackgroundColor3 = state and Color3.fromRGB(50, 200, 100) or Color3.fromRGB(35, 45, 35)
+            btn.TextColor3 = state and Color3.fromRGB(0,0,0) or Color3.fromRGB(220,220,220)
+        end
+        callback(state, btn)
+    end)
+    return btn
+end
+
+-- 1. Turbine Select Button
+createButton(menuScroll, "Turbine Select", false, function(_, btn)
+    btn.Text = "Selecting Turbine..."
+    task.spawn(function()
+        pcall(function()
+            local RE = ReplicatedStorage:WaitForChild("RE")
+            RE:WaitForChild("1Too1l"):InvokeServer("PickingTools", "PropMaker")
+            RE:WaitForChild("1Clea1rTool1s"):FireServer("OpenPropMenu")
+            RE:WaitForChild("1Clea1rTool1s"):FireServer("RequestingPropName", "PowerTurbine", "Barrel")
+            btn.Text = "Turbine Select (Done)"
+        end)
+    end)
+end)
+
+-- 2. Auto Duplicate Button
+createButton(menuScroll, "Auto Duplicate", false, function(_, btn)
+    btn.Text = "Duplicating..."
+    task.spawn(function()
+        updatePropsCache()
+        if #propsCache >= 2 then
+            local duplicateRemote = propsCache[2]:FindFirstChild("DuplicateProp")
+            if duplicateRemote and duplicateRemote:IsA("RemoteFunction") then
+                for i = 1, 13 do
+                    task.spawn(function()
+                        pcall(function() duplicateRemote:InvokeServer() end)
+                    end)
+                    task.wait(0.05)
+                end
+            end
+        else
+            -- Fallback if only 1 prop exists
+            if #propsCache == 1 then
+                local duplicateRemote = propsCache[1]:FindFirstChild("DuplicateProp")
+                if duplicateRemote and duplicateRemote:IsA("RemoteFunction") then
+                    for i = 1, 14 do
+                        task.spawn(function() pcall(function() duplicateRemote:InvokeServer() end) end)
+                        task.wait(0.05)
+                    end
+                end
+            end
+        end
+        task.wait(0.5)
+        updatePropsCache()
+        btn.Text = "Auto Duplicate (Done)"
+    end)
+end)
+
+createButton(menuScroll, "Hide Avatar Inside Snake", true, function(state)
+    hideAvatarEnabled = state
+    if activeTracking then setAvatarVisibility(not state) end
+end)
+
+-- RGB Frame
+local rgbFrame = Instance.new("Frame", menuScroll)
+rgbFrame.Size = UDim2.fromScale(0.9, 0.08)
+rgbFrame.BackgroundTransparency = 1
+local rgbLayout = Instance.new("UIListLayout", rgbFrame)
+rgbLayout.FillDirection = Enum.FillDirection.Horizontal
+rgbLayout.SortOrder = Enum.SortOrder.LayoutOrder
+rgbLayout.Padding = UDim.new(0.02, 0)
+
+local modes = {"Dyna", "Shift", "Disco", "OFF"}
+local rgbBtns = {}
+for _, mode in ipairs(modes) do
+    local btn = Instance.new("TextButton", rgbFrame)
+    btn.Size = UDim2.fromScale(0.235, 1)
+    btn.BackgroundColor3 = (mode == "OFF") and Color3.fromRGB(50, 200, 100) or Color3.fromRGB(35, 45, 35)
+    btn.Text = mode
+    btn.TextColor3 = (mode == "OFF") and Color3.fromRGB(0,0,0) or Color3.fromRGB(220,220,220)
+    btn.Font = Enum.Font.GothamSemibold
+    btn.TextScaled = true
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0.2, 0)
+    
+    btn.MouseButton1Click:Connect(function()
+        playClickSound()
+        rgbMode = mode
+        for _, b in ipairs(rgbBtns) do
+            b.BackgroundColor3 = Color3.fromRGB(0,0,0)
+            b.TextColor3 = Color3.fromRGB(220,220,220)
+        end
+        btn.BackgroundColor3 = Color3.fromRGB(50, 200, 100)
+        btn.TextColor3 = Color3.fromRGB(0,0,0)
+    end)
+    table.insert(rgbBtns, btn)
+end
+
+local actionBtn = createButton(menuScroll, "AWAKEN ANACONDA", false, function(_, btn)
+    activeTracking = not activeTracking
+    if activeTracking then
+        updatePropsCache()
+        if #propsCache == 0 then
+            btn.Text = "NO PROPS DETECTED"
+            activeTracking = false
+            task.delay(2, function()
+                btn.Text = "AWAKEN ANACONDA"
+                btn.BackgroundColor3 = Color3.fromRGB(35, 45, 35)
+                btn.TextColor3 = Color3.fromRGB(220, 220, 220)
+            end)
+            return
+        end
+        
+        btn.Text = "SLEEP ANACONDA"
+        btn.BackgroundColor3 = Color3.fromRGB(50, 200, 100)
+        btn.TextColor3 = Color3.fromRGB(0,0,0)
+        
+        table.clear(segmentCFrames)
+        table.clear(targetCFrames)
+        table.clear(pathHistory)
+        
+        startSnakeReplication()
+        if hideAvatarEnabled then setAvatarVisibility(false) end
+    else
+        btn.Text = "AWAKEN ANACONDA"
+        btn.BackgroundColor3 = Color3.fromRGB(35, 45, 35)
+        btn.TextColor3 = Color3.fromRGB(220,220,220)
+        
+        if trackingConnection then 
+            trackingConnection:Disconnect()
+            trackingConnection = nil 
+        end
+        setAvatarVisibility(true)
+    end
+end)
+actionBtn.Size = UDim2.fromScale(0.9, 0.12)
+
+-- --- UI INTERACTIONS ---
+mainCloseBtn.MouseButton1Click:Connect(function()
+    playClickSound()
+    activeTracking = false
+    if trackingConnection then
+        trackingConnection:Disconnect()
+        trackingConnection = nil
+    end
+    setAvatarVisibility(true)
+    pcall(function() ReplicatedStorage:WaitForChild("RE"):WaitForChild("1Clea1rTool1s"):FireServer("ClearAllProps") end)
+    gui:Destroy()
+end)
+
+minimizeBtn.MouseButton1Click:Connect(function()
+    playClickSound()
+    mainFrame.Visible = false
+    reopenBtn.Visible = true
+end)
+
+reopenBtn.MouseButton1Click:Connect(function()
+    playClickSound()
+    reopenBtn.Visible = false
+    mainFrame.Visible = true
+end)
+
+-- --- RGB GLOW COROUTINE ---
+task.spawn(function()
+    local hue, lastShift = 0, 0
+    while true do
+        if rgbMode ~= "OFF" then 
+            updatePropsCache()
+            local now = tick()
+            
+            if rgbMode == "Dyna" then
+                hue = (hue + 0.01) % 1
+                local color = Color3.fromHSV(hue, 1, 1)
+                for _, prop in ipairs(propsCache) do for _, desc in ipairs(prop:GetDescendants()) do if desc:IsA("BasePart") then desc.Color = color end end end
+            elseif rgbMode == "Shift" then
+                if now - lastShift > 0.5 then
+                    lastShift = now
+                    local color = Color3.fromHSV(math.random(), 1, 1)
+                    for _, prop in ipairs(propsCache) do for _, desc in ipairs(prop:GetDescendants()) do if desc:IsA("BasePart") then desc.Color = color end end end
+                end
+            elseif rgbMode == "Disco" then
+                if now - lastShift > 0.2 then
+                    lastShift = now
+                    for _, prop in ipairs(propsCache) do
+                        local color = Color3.fromHSV(math.random(), 1, 1)
+                        for _, desc in ipairs(prop:GetDescendants()) do if desc:IsA("BasePart") then desc.Color = color end end
+                    end
+                end
+            end
+        end
+        RunService.Heartbeat:Wait()
+    end
+end)
+
+-- --- HELPER: SAMPLE PATH HISTORY FOR BODY ---
+local function getPathCFrameAtDistance(targetDist: number): CFrame
+    if #pathHistory == 0 then return CFrame.new() end
+    if #pathHistory == 1 or targetDist <= 0 then return pathHistory[1] end
+    
+    local accumulated = 0
+    for j = 1, #pathHistory - 1 do
+        local pt1 = pathHistory[j]
+        local pt2 = pathHistory[j+1]
+        local dist = (pt1.Position - pt2.Position).Magnitude
+        
+        if accumulated + dist >= targetDist then
+            local alpha = (targetDist - accumulated) / dist
+            return pt1:Lerp(pt2, alpha)
+        end
+        accumulated = accumulated + dist
+    end
+    return pathHistory[#pathHistory]
+end
+
+-- --- DYNAMIC SNAKE MATH & REPLICATION LOOP ---
+function startSnakeReplication()
+    local nextNetworkUpdate = 0
+    local traveledDistance = 0
+    local lastPlayerPos = nil
+    
+    -- Universal Rotation for Props
+    local dynPropRotation = CFrame.Angles(
+        math.rad(PROP_ROTATION_X - 360),
+        math.rad(PROP_ROTATION_Y - 360),
+        math.rad(PROP_ROTATION_Z - 360)
+    )
+    
+    trackingConnection = RunService.Heartbeat:Connect(function(deltaTime)
+        if not activeTracking then return end
+        
+        local char = lp.Character
+        local rootPart = char and char:FindFirstChild("HumanoidRootPart") :: BasePart
+        
+        if char and rootPart then
+            local rootPos = rootPart.Position
+            local velocityMag = Vector3.new(rootPart.Velocity.X, 0, rootPart.Velocity.Z).Magnitude
+            
+            -- Detect if player is actively moving
+            local isMoving = velocityMag > 1.5 
+            
+            if not lastPlayerPos then lastPlayerPos = rootPos end
+            local distMoved = (Vector3.new(rootPos.X, 0, rootPos.Z) - Vector3.new(lastPlayerPos.X, 0, lastPlayerPos.Z)).Magnitude
+            lastPlayerPos = rootPos
+            
+            local t = tick()
+            local _, yaw, _ = rootPart.CFrame:ToEulerAnglesYXZ()
+            local baseCFrame = CFrame.new(rootPos) * CFrame.Angles(0, yaw, 0) * CFrame.new(0, -defaultUserHipHeight, 0)
+            
+            local GAP = SCALE_MULTIPLIER * 3
+            
+            -- Fill path history immediately behind player if empty
+            if #pathHistory == 0 then
+                for k = 1, 100 do
+                    table.insert(pathHistory, baseCFrame * CFrame.new(0, 1, k * RECORD_RESOLUTION))
+                end
+            end
+            
+            -- NEW LOGIC: Only update path and targets WHEN MOVING. 
+            -- When stopped, do nothing to targetCFrames, so the snake freezes perfectly in place.
+            if isMoving then
+                traveledDistance = traveledDistance + distMoved
+                
+                -- Sine Wave Logic
+                local A = SCALE_MULTIPLIER * 1.2    
+                local k_wave = 0.4                  
+                local omega = 6.5                   
+                
+                local waveX = A * math.sin((traveledDistance * k_wave) - (t * omega))
+                local waveDerivative = A * k_wave * math.cos((traveledDistance * k_wave) - (t * omega))
+                local yawOffset = math.atan(-waveDerivative)
+                
+                -- Create wavy path behind user
+                local virtualHeadCFrame = baseCFrame * CFrame.new(waveX, 1, SCALE_MULTIPLIER * 0.8) * CFrame.Angles(0, yawOffset, 0)
+                
+                if (virtualHeadCFrame.Position - pathHistory[1].Position).Magnitude >= RECORD_RESOLUTION then
+                    table.insert(pathHistory, 1, virtualHeadCFrame)
+                    if #pathHistory > MAX_HISTORY_LENGTH then
+                        table.remove(pathHistory)
+                    end
+                end
+                
+                -- Update Targets ONLY while moving
+                for i = 1, #propsCache do
+                    if i == 1 then
+                        targetCFrames[1] = pathHistory[1]
+                    else
+                        local targetDist = (i - 1) * GAP
+                        targetCFrames[i] = getPathCFrameAtDistance(targetDist)
+                    end
+                end
+            end
+
+            local shouldNetworkUpdate = t >= nextNetworkUpdate
+            if shouldNetworkUpdate then nextNetworkUpdate = t + 0.1 end
+            
+            -- Apply CFrames (Moving or Stopped)
+            for i = 1, #propsCache do
+                local prop = propsCache[i]
+                
+                if not targetCFrames[i] then targetCFrames[i] = baseCFrame end
+                if not segmentCFrames[i] then segmentCFrames[i] = targetCFrames[i] end
+                
+                -- Smoothly follow the target (If stopped, the target isn't moving, so it just settles)
+                segmentCFrames[i] = segmentCFrames[i]:Lerp(targetCFrames[i], 0.6)
+                
+                -- Apply the Universal Rotation directly to every single prop 
+                local finalPropCFrame = segmentCFrames[i] * dynPropRotation
+                
+                if prop.PrimaryPart then
+                    prop:SetPrimaryPartCFrame(finalPropCFrame)
+                end
+                
+                if shouldNetworkUpdate then
+                    local remote = prop:FindFirstChild("SetCurrentCFrame")
+                    if remote and remote:IsA("RemoteFunction") then
+                        task.spawn(function() pcall(function() remote:InvokeServer(finalPropCFrame) end) end)
+                    end
+                end
+            end
+        end
+    end)
+end
