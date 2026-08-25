@@ -6,11 +6,11 @@ return {
     Admin = {
         kausarali2 = true,
         cutie143198 = true,
-        mob_one0 = false
+        mob_one0 = false 
     },
 
     Staff = {
-        Apkayash = true
+        noOne = true
          
     },
 
@@ -70,6 +70,8 @@ Yeyllow_2 = true,
 @myname_myname100 = true,
 XxXxSejalXxXx = true,
 Garammasalahun = true,
+Apkayash = true 
+
 
 
 
