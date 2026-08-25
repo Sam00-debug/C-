@@ -23,7 +23,7 @@ local defaultUserJumpPower = hum.JumpPower
 local defaultGravity = workspace.Gravity
 
 -- --- MECH CONFIGURATION & SLIDER VARIABLES ---
-local SCALE_MULTIPLIER = 9.5 
+local SCALE_MULTIPLIER = 15
 local MECH_HEIGHT_OFFSET = defaultUserHipHeight * SCALE_MULTIPLIER
 local BACKWARD_OFFSET_Z = 25  
 local BACKWARD_OFFSET_X = 0   
