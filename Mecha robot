@@ -1,0 +1,752 @@
+-- !strict
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local CoreGui = game:GetService("CoreGui")
+local StarterGui = game:GetService("StarterGui")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Debris = game:GetService("Debris")
+
+local lp = Players.LocalPlayer
+local activeTracking = false
+local beRobotEnabled = false
+local rgbMode = "OFF"
+local trackingConnection: RBXScriptConnection? = nil
+local customPropInstructionThread: thread? = nil
+
+local character = lp.Character or lp.CharacterAdded:Wait()
+local hum = character:WaitForChild("Humanoid")
+
+local defaultUserHipHeight = hum.HipHeight
+local defaultUserWalkSpeed = hum.WalkSpeed
+local defaultUserJumpPower = hum.JumpPower
+local defaultGravity = workspace.Gravity
+
+-- --- MECH CONFIGURATION & SLIDER VARIABLES ---
+local SCALE_MULTIPLIER = 9.5 
+local MECH_HEIGHT_OFFSET = defaultUserHipHeight * SCALE_MULTIPLIER
+local BACKWARD_OFFSET_Z = 25  
+local BACKWARD_OFFSET_X = 0   
+local PROP_ROTATION_X = 270   -- -90 degrees
+local PROP_ROTATION_Y = 0     
+local PROP_ROTATION_Z = 0     
+
+local FOLLOW_SMOOTHNESS = 0.15 
+local propsCache: { [number]: Model } = {}
+local currentMechOrigin: CFrame? = nil
+
+local function playClickSound()
+    local s = Instance.new("Sound")
+    s.SoundId = "rbxassetid://876939830"
+    s.Parent = CoreGui
+    s:Play()
+    Debris:AddItem(s, 2)
+end
+
+local function updatePropsCache()
+    table.clear(propsCache)
+    local workspaceCom = workspace:FindFirstChild("WorkspaceCom")
+    if workspaceCom then
+        for _, folder in ipairs(workspaceCom:GetChildren()) do
+            for _, child in ipairs(folder:GetChildren()) do
+                if child.Name:sub(1, 4) == "Prop" and child.Name:find(lp.Name) then
+                    table.insert(propsCache, child)
+                end
+            end
+        end
+    end
+end
+
+local function setAvatarVisibility(visible: boolean)
+    local char = lp.Character
+    if not char then return end
+    for _, desc in pairs(char:GetDescendants()) do
+        if desc:IsA("BasePart") and desc.Name ~= "HumanoidRootPart" then
+            desc.LocalTransparencyModifier = visible and 0 or 1
+        elseif desc:IsA("Decal") then
+            desc.LocalTransparencyModifier = visible and 0 or 1
+        end
+    end
+end
+
+StarterGui:SetCore("SendNotification", {Title="Mecha Robot 🤖", Text="hold propbox - click On Ground without selecting any prop", Duration=15})
+
+-- --- PROFESSIONAL UI DESIGN (STRICT SCALE) ---
+local gui = Instance.new("ScreenGui", CoreGui)
+gui.Name = "MechaRobotUI"
+gui.ResetOnSpawn = false
+
+local mainFrame = Instance.new("Frame", gui)
+mainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+mainFrame.Size = UDim2.fromScale(0.35, 0.6)
+mainFrame.Position = UDim2.fromScale(0.5, 0.5)
+mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+mainFrame.ClipsDescendants = true
+Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0.03, 0)
+
+-- Draggable Logic
+local dragging, dragStart, startPos
+mainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true; dragStart = input.Position; startPos = mainFrame.Position
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - dragStart
+        mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
+end)
+
+-- Top Bar
+local topBar = Instance.new("Frame", mainFrame)
+topBar.Size = UDim2.fromScale(1, 0.2)
+topBar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+Instance.new("UICorner", topBar).CornerRadius = UDim.new(0.2, 0)
+local bottomCover = Instance.new("Frame", topBar)
+bottomCover.Size = UDim2.fromScale(1, 0.5)
+bottomCover.Position = UDim2.fromScale(0, 0.5)
+bottomCover.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+bottomCover.BorderSizePixel = 0
+
+local mainTitle = Instance.new("TextLabel", topBar)
+mainTitle.Size = UDim2.fromScale(0.8, 1)
+mainTitle.Position = UDim2.fromScale(0.05, 0)
+mainTitle.BackgroundTransparency = 1
+mainTitle.Text = "Nothing Mecha 🤖"
+mainTitle.TextColor3 = Color3.fromRGB(255,255,255)
+mainTitle.Font = Enum.Font.GothamBold
+mainTitle.TextScaled = true
+mainTitle.TextXAlignment = Enum.TextXAlignment.Left
+
+local minimizeBtn = Instance.new("TextButton", topBar)
+minimizeBtn.Size = UDim2.fromScale(0.1, 0.7)
+minimizeBtn.Position = UDim2.fromScale(0.75, 0.15)
+minimizeBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+minimizeBtn.Text = "-"
+minimizeBtn.TextColor3 = Color3.fromRGB(255,255,255)
+minimizeBtn.Font = Enum.Font.GothamBold
+minimizeBtn.TextScaled = true
+Instance.new("UICorner", minimizeBtn).CornerRadius = UDim.new(0.2, 0)
+
+local mainCloseBtn = Instance.new("TextButton", topBar)
+mainCloseBtn.Size = UDim2.fromScale(0.1, 0.7)
+mainCloseBtn.Position = UDim2.fromScale(0.87, 0.15)
+mainCloseBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+mainCloseBtn.Text = "X"
+mainCloseBtn.TextColor3 = Color3.fromRGB(255,255,255)
+mainCloseBtn.Font = Enum.Font.GothamBold
+mainCloseBtn.TextScaled = true
+Instance.new("UICorner", mainCloseBtn).CornerRadius = UDim.new(0.2, 0)
+
+local reopenBtn = Instance.new("TextButton", gui)
+reopenBtn.Size = UDim2.fromScale(0.05, 0.35)
+reopenBtn.Position = UDim2.fromScale(0.1, 0.5)
+reopenBtn.BackgroundColor3 = Color3.fromRGB(25,25,25)
+reopenBtn.Text = "🤖"
+reopenBtn.TextScaled = true
+reopenBtn.Visible = false
+Instance.new("UICorner", reopenBtn).CornerRadius = UDim.new(1,0)
+Instance.new("UIAspectRatioConstraint", reopenBtn).AspectRatio = 1
+
+local reopenDragging, reopenDragStart, reopenStartPos
+reopenBtn.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        reopenDragging = true; reopenDragStart = input.Position; reopenStartPos = reopenBtn.Position
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if reopenDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+        local delta = input.Position - reopenDragStart
+        reopenBtn.Position = UDim2.new(reopenStartPos.X.Scale, reopenStartPos.X.Offset + delta.X, reopenStartPos.Y.Scale, reopenStartPos.Y.Offset + delta.Y)
+    end
+end)
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then reopenDragging = false end
+end)
+
+-- Main Menu & Settings Containers
+local menuScroll = Instance.new("ScrollingFrame", mainFrame)
+menuScroll.Size = UDim2.fromScale(0.95, 0.8)
+menuScroll.Position = UDim2.fromScale(0, 0.2)
+menuScroll.BackgroundTransparency = 1
+menuScroll.ScrollBarThickness = 4
+menuScroll.Parent = mainFrame
+menuScroll.CanvasSize = UDim2.fromScale(0, 1.8)
+
+local menuLayout = Instance.new("UIListLayout", menuScroll)
+menuLayout.SortOrder = Enum.SortOrder.LayoutOrder
+menuLayout.Padding = UDim.new(0.04, 0)
+menuLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+local settingsScroll = Instance.new("ScrollingFrame", mainFrame)
+settingsScroll.Size = UDim2.fromScale(0.95, 0.8)
+settingsScroll.Position = UDim2.fromScale(0, 0.2)
+settingsScroll.BackgroundTransparency = 1
+settingsScroll.ScrollBarThickness = 4
+settingsScroll.CanvasSize = UDim2.fromScale(0, 2)
+settingsScroll.Visible = false
+
+local settingsLayout = Instance.new("UIListLayout", settingsScroll)
+settingsLayout.SortOrder = Enum.SortOrder.LayoutOrder
+settingsLayout.Padding = UDim.new(0.02, 0)
+settingsLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+local function createButton(parent, text, isToggle, callback)
+    local btn = Instance.new("TextButton", parent)
+    btn.Size = UDim2.fromScale(0.9, 0.08)
+    btn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+    btn.Text = isToggle and text.." : OFF" or text
+    btn.TextColor3 = Color3.fromRGB(220,220,220)
+    btn.Font = Enum.Font.GothamSemibold
+    btn.TextScaled = true
+    Instance.new("UICorner",btn).CornerRadius = UDim.new(0.2, 0)
+    local padding = Instance.new("UIPadding", btn)
+    padding.PaddingTop = UDim.new(0.2,0)
+    padding.PaddingBottom = UDim.new(0.2,0)
+
+    local state = false
+    btn.MouseButton1Click:Connect(function()
+        playClickSound()
+        if isToggle then
+            state = not state
+            btn.Text = text .. (state and " : ON" or " : OFF")
+            btn.BackgroundColor3 = state and Color3.fromRGB(30,215,96) or Color3.fromRGB(40,40,40)
+            btn.TextColor3 = state and Color3.fromRGB(0,0,0) or Color3.fromRGB(220,220,220)
+        end
+        callback(state, btn)
+    end)
+    return btn
+end
+
+-- MAIN MENU BUTTONS
+createButton(menuScroll, "Auto Prop Select", false, function(_, btn)
+    btn.Text = "Spawning Props..."
+    task.spawn(function()
+        pcall(function()
+            local RE = ReplicatedStorage:WaitForChild("RE")
+            RE:WaitForChild("1Too1l"):InvokeServer("PickingTools", "PropMaker")
+            RE:WaitForChild("1Clea1rTool1s"):FireServer("OpenPropMenu")
+            RE:WaitForChild("1Clea1rTool1s"):FireServer("RequestingPropName", "BigGunBunker", "Big")
+            local bunkerSpawned = false
+            while not bunkerSpawned do
+                updatePropsCache()
+                if #propsCache >= 1 then
+                    bunkerSpawned = true
+                    RE:WaitForChild("1Clea1rTool1s"):FireServer("RequestingPropName", "PowerTurbine", "Barrel")
+                end
+                task.wait(0.5)
+            end
+            btn.Text = "Auto Prop Select (Done)"
+        end)
+    end)
+end)
+
+createButton(menuScroll, " prop Duplicate", false, function()
+    updatePropsCache()
+    if #propsCache >= 2 then
+        local duplicateRemote = propsCache[2]:FindFirstChild("DuplicateProp")
+        if duplicateRemote and duplicateRemote:IsA("RemoteFunction") then
+            for i = 1, 13 do
+                task.spawn(function() pcall(function() duplicateRemote:InvokeServer() end) end)
+                task.wait(0.05)
+            end
+            StarterGui:SetCore("SendNotification", {Title="Duplicated", Text="Forced duplication of props.", Duration=5})
+        end
+    else
+        StarterGui:SetCore("SendNotification", {Title="Error", Text="Need at least 2 props spawned first.", Duration=5})
+    end
+end)
+
+-- Instruction Banner UI
+local customPropBanner = Instance.new("Frame", gui)
+customPropBanner.Size = UDim2.fromScale(0.4, 0.1)
+customPropBanner.Position = UDim2.fromScale(0.1, 0.05)
+customPropBanner.BackgroundColor3 = Color3.fromRGB(0,0,0)
+customPropBanner.Visible = false
+Instance.new("UICorner", customPropBanner).CornerRadius = UDim.new(0.1, 0)
+local bannerText = Instance.new("TextLabel", customPropBanner)
+bannerText.Size = UDim2.fromScale(0.8, 1)
+bannerText.Position = UDim2.fromScale(0.05, 0)
+bannerText.BackgroundTransparency = 1
+bannerText.TextColor3 = Color3.fromRGB(255,255,255)
+bannerText.Font = Enum.Font.GothamBold
+bannerText.TextScaled = true
+local bannerClose = Instance.new("TextButton", customPropBanner)
+bannerClose.Size = UDim2.fromScale(0.1, 0.6)
+bannerClose.Position = UDim2.fromScale(0.88, 0.2)
+bannerClose.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+bannerClose.Text = "X"
+bannerClose.TextColor3 = Color3.fromRGB(255,255,255)
+bannerClose.Font = Enum.Font.GothamBold
+bannerClose.TextScaled = true
+Instance.new("UICorner", bannerClose).CornerRadius = UDim.new(0.2, 0)
+
+local partsList = {"Upper Torso", "Head", "Left Upper Arm", "Left Lower Arm", "Right Upper Arm", "Right Lower Arm", "Left Upper Leg", "Left Lower Leg", "Right Upper Leg", "Right Lower Leg", "Left Hand", "Right Hand", "Lower Torso", "Left Foot", "Right Foot"}
+
+bannerClose.MouseButton1Click:Connect(function()
+    customPropBanner.Visible = false
+    if customPropInstructionThread then task.cancel(customPropInstructionThread) end
+end)
+
+createButton(menuScroll, "Custom body Parts", false, function()
+    customPropBanner.Visible = true
+    if customPropInstructionThread then task.cancel(customPropInstructionThread) end
+    customPropInstructionThread = task.spawn(function()
+        while customPropBanner.Visible do
+            updatePropsCache()
+            local count = #propsCache
+            if count == 0 then
+                bannerText.Text = "Spawn Prop For: " .. partsList[1]
+            elseif count < 15 then
+                bannerText.Text = "Spawn Prop For: " .. partsList[count + 1] .. " ("..count.."/15)"
+            else
+                bannerText.Text = "All 15 Props Spawned! Ready."
+            end
+            task.wait(0.5)
+        end
+    end)
+end)
+
+createButton(menuScroll, "Be Robot", true, function(state)
+    beRobotEnabled = state
+    if activeTracking then setAvatarVisibility(not state) end
+end)
+
+-- RGB Frame
+local rgbFrame = Instance.new("Frame", menuScroll)
+rgbFrame.Size = UDim2.fromScale(0.9, 0.08)
+rgbFrame.BackgroundTransparency = 1
+local rgbLayout = Instance.new("UIListLayout", rgbFrame)
+rgbLayout.FillDirection = Enum.FillDirection.Horizontal
+rgbLayout.SortOrder = Enum.SortOrder.LayoutOrder
+rgbLayout.Padding = UDim.new(0.02, 0)
+
+local modes = {"Dyna", "Shift", "Disco", "OFF"}
+local rgbBtns = {}
+for _, mode in ipairs(modes) do
+    local btn = Instance.new("TextButton", rgbFrame)
+    btn.Size = UDim2.fromScale(0.235, 1)
+    btn.BackgroundColor3 = (mode == "OFF") and Color3.fromRGB(30,215,96) or Color3.fromRGB(40,40,40)
+    btn.Text = mode
+    btn.TextColor3 = (mode == "OFF") and Color3.fromRGB(0,0,0) or Color3.fromRGB(220,220,220)
+    btn.Font = Enum.Font.GothamSemibold
+    btn.TextScaled = true
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0.2, 0)
+    
+    btn.MouseButton1Click:Connect(function()
+        playClickSound()
+        rgbMode = mode
+        for _, b in ipairs(rgbBtns) do
+            b.BackgroundColor3 = Color3.fromRGB(0,0,0)
+            b.TextColor3 = Color3.fromRGB(220,220,220)
+        end
+        btn.BackgroundColor3 = Color3.fromRGB(30,215,96)
+        btn.TextColor3 = Color3.fromRGB(0,0,0)
+    end)
+    table.insert(rgbBtns, btn)
+end
+
+createButton(menuScroll, "SETTINGS", false, function()
+    menuScroll.Visible = false
+    settingsScroll.Visible = true
+    mainTitle.Text = "Configuration ⚙️"
+end)
+
+local actionBtn = createButton(menuScroll, "DEPLOY MECHA", false, function(_, btn)
+    activeTracking = not activeTracking
+    if activeTracking then
+        updatePropsCache()
+        if #propsCache == 0 then
+            btn.Text = "NO PROPS DETECTED"
+            activeTracking = false
+
+            task.delay(2, function()
+                btn.Text = "DEPLOY MECHA"
+                btn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                btn.TextColor3 = Color3.fromRGB(0, 0, 0)
+            end)
+
+            return
+        end
+        
+        local hum = lp.Character and lp.Character:FindFirstChildOfClass("Humanoid")
+        if hum then 
+            defaultUserHipHeight = hum.HipHeight 
+            defaultUserWalkSpeed = hum.WalkSpeed
+            defaultUserJumpPower = hum.JumpPower
+        end
+        defaultGravity = workspace.Gravity
+        
+        btn.Text = "TERMINATE MECHA"
+        btn.BackgroundColor3 = Color3.fromRGB(30, 215, 96)
+        btn.TextColor3 = Color3.fromRGB(0,0,0)
+        startReplication()
+        
+        if beRobotEnabled then setAvatarVisibility(false) end
+    else
+        btn.Text = "DEPLOY MECHA"
+        btn.BackgroundColor3 = Color3.fromRGB(255,255,255)
+        btn.TextColor3 = Color3.fromRGB(1,1,1)
+        
+        if trackingConnection then 
+            trackingConnection:Disconnect()
+            trackingConnection = nil 
+        end
+        
+        setAvatarVisibility(true)
+    end
+end)
+actionBtn.Size = UDim2.fromScale(0.9, 0.12)
+
+
+local function createSlider(parent, text, min, max, defaultVal, callback)
+    local frame = Instance.new("Frame", parent)
+    frame.Size = UDim2.fromScale(0.9, 0.12)
+    frame.BackgroundTransparency = 1
+    
+    local label = Instance.new("TextLabel", frame)
+    label.Size = UDim2.fromScale(1, 0.4)
+    label.BackgroundTransparency = 1
+    label.Text = string.format("%s: %.1f", text, defaultVal)
+    label.TextColor3 = Color3.fromRGB(255,255,255)
+    label.Font = Enum.Font.GothamSemibold
+    label.TextScaled = true
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    
+    local sliderBg = Instance.new("Frame", frame)
+    sliderBg.Size = UDim2.fromScale(1, 0.2)
+    sliderBg.Position = UDim2.fromScale(0, 0.6)
+    sliderBg.BackgroundColor3 = Color3.fromRGB(60,60,60)
+    Instance.new("UICorner", sliderBg).CornerRadius = UDim.new(1, 0)
+    
+    local sliderFill = Instance.new("Frame", sliderBg)
+    sliderFill.Size = UDim2.fromScale((defaultVal - min) / (max - min), 1)
+    sliderFill.BackgroundColor3 = Color3.fromRGB(30, 215, 96)
+    Instance.new("UICorner", sliderFill).CornerRadius = UDim.new(1, 0)
+    
+    local knob = Instance.new("TextButton", sliderBg)
+    knob.Size = UDim2.fromScale(0.05, 2)
+    knob.AnchorPoint = Vector2.new(0.5, 0.5)
+    knob.Position = UDim2.fromScale((defaultVal - min) / (max - min), 0.5)
+    knob.BackgroundColor3 = Color3.fromRGB(255,255,255)
+    knob.Text = ""
+    Instance.new("UICorner", knob).CornerRadius = UDim.new(1, 0)
+
+    local function applyValue(relativeX)
+        relativeX = math.clamp(relativeX, 0, 1)
+        knob.Position = UDim2.fromScale(relativeX, 0.5)
+        sliderFill.Size = UDim2.fromScale(relativeX, 1)
+        local val = min + (max - min) * relativeX
+        label.Text = string.format("%s: %.1f", text, val)
+        callback(val)
+    end
+
+    local isDragging = false
+    knob.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then isDragging = true end
+    end)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then isDragging = false end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if isDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local relativeX = (input.Position.X - sliderBg.AbsolutePosition.X) / sliderBg.AbsoluteSize.X
+            applyValue(relativeX)
+        end
+    end)
+    
+    return function(setVal)
+        local rel = (setVal - min) / (max - min)
+        applyValue(rel)
+    end
+end
+
+createButton(settingsScroll, "← Back to Menu", false, function()
+    settingsScroll.Visible = false
+    menuScroll.Visible = true
+    mainTitle.Text = "Nothing Mecha 🤖"
+end)
+
+-- Preset Container
+local presetFrame = Instance.new("Frame", settingsScroll)
+presetFrame.Size = UDim2.fromScale(0.9, 0.08)
+presetFrame.BackgroundTransparency = 1
+local presetLayout = Instance.new("UIListLayout", presetFrame)
+presetLayout.FillDirection = Enum.FillDirection.Horizontal
+presetLayout.SortOrder = Enum.SortOrder.LayoutOrder
+presetLayout.Padding = UDim.new(0.04, 0)
+
+local mechaBtn = Instance.new("TextButton", presetFrame)
+mechaBtn.Size = UDim2.fromScale(0.48, 1)
+mechaBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+mechaBtn.Text = "MECHA"
+mechaBtn.TextColor3 = Color3.fromRGB(220,220,220)
+mechaBtn.Font = Enum.Font.GothamBold
+mechaBtn.TextScaled = true
+Instance.new("UICorner", mechaBtn).CornerRadius = UDim.new(0.2, 0)
+
+local humanBtn = Instance.new("TextButton", presetFrame)
+humanBtn.Size = UDim2.fromScale(0.48, 1)
+humanBtn.BackgroundColor3 = Color3.fromRGB(40,40,40)
+humanBtn.Text = "HUMAN"
+humanBtn.TextColor3 = Color3.fromRGB(220,220,220)
+humanBtn.Font = Enum.Font.GothamBold
+humanBtn.TextScaled = true
+Instance.new("UICorner", humanBtn).CornerRadius = UDim.new(0.2, 0)
+
+local updateScale = createSlider(settingsScroll, " Size  ", 0, 11, SCALE_MULTIPLIER, function(val) SCALE_MULTIPLIER = val; MECH_HEIGHT_OFFSET = (defaultUserHipHeight or 2) * val end)
+local updateHeight = createSlider(settingsScroll, " Height ", 0, 100, MECH_HEIGHT_OFFSET, function(val) MECH_HEIGHT_OFFSET = val end)
+local updatePosX = createSlider(settingsScroll, "Position Z", -40, 40, BACKWARD_OFFSET_Z, function(val) BACKWARD_OFFSET_Z = val end)
+local updatePosZ = createSlider(settingsScroll, "Position X", -40, 40, BACKWARD_OFFSET_X, function(val) BACKWARD_OFFSET_X = val end)
+local updateRotX = createSlider(settingsScroll, "Rotation X", 0, 360, PROP_ROTATION_X, function(val) PROP_ROTATION_X = val end) 
+local updateRotY = createSlider(settingsScroll, "Rotation Y", 0, 360, PROP_ROTATION_Y, function(val) PROP_ROTATION_Y = val end) 
+local updateRotZ = createSlider(settingsScroll, "Rotation Z", 0, 360, PROP_ROTATION_Z, function(val) PROP_ROTATION_Z = val end) 
+
+mechaBtn.MouseButton1Click:Connect(function()
+    playClickSound()
+    updateScale(9.5)
+    updateHeight((defaultUserHipHeight or 2) * 9.5)
+    updatePosX(25)
+    updatePosZ(0)
+    updateRotX(270)
+    updateRotY(0)
+    updateRotZ(0)
+end)
+
+humanBtn.MouseButton1Click:Connect(function()
+    playClickSound()
+    updateScale(1.7)
+    updateHeight(5)
+    updatePosX(0)
+    updatePosZ(0)
+    updateRotX(0)
+    updateRotY(0)
+    updateRotZ(0)
+end)
+
+
+mainCloseBtn.MouseButton1Click:Connect(function()
+    playClickSound()
+    activeTracking = false
+    if trackingConnection then
+        trackingConnection:Disconnect()
+        trackingConnection = nil
+    end
+
+    local hum = lp.Character and lp.Character:FindFirstChildOfClass("Humanoid")
+    if hum then
+        workspace.CurrentCamera.CameraSubject = hum
+        hum.WalkSpeed = defaultUserWalkSpeed
+        hum.JumpPower = defaultUserJumpPower
+        hum.UseJumpPower = true
+        hum.HipHeight = defaultUserHipHeight
+        workspace.Gravity = defaultGravity
+    end
+    setAvatarVisibility(true)
+
+    pcall(function()
+        ReplicatedStorage:WaitForChild("RE"):WaitForChild("1Clea1rTool1s"):FireServer("ClearAllProps")
+    end)
+    gui:Destroy()
+end)
+
+minimizeBtn.MouseButton1Click:Connect(function()
+    playClickSound()
+    mainFrame.Visible = false
+    reopenBtn.Visible = true
+end)
+
+reopenBtn.MouseButton1Click:Connect(function()
+    playClickSound()
+    reopenBtn.Visible = false
+    mainFrame.Visible = true
+end)
+
+
+task.spawn(function()
+    local hue, lastShift = 0, 0
+    while true do
+        if rgbMode ~= "OFF" then 
+            updatePropsCache()
+            local now = tick()
+            
+            if rgbMode == "Dyna" then
+                hue = (hue + 0.01) % 1
+                local color = Color3.fromHSV(hue, 1, 1)
+                for _, prop in ipairs(propsCache) do for _, desc in ipairs(prop:GetDescendants()) do if desc:IsA("BasePart") then desc.Color = color end end end
+            elseif rgbMode == "Shift" then
+                if now - lastShift > 0.5 then
+                    lastShift = now
+                    local color = Color3.fromHSV(math.random(), 1, 1)
+                    for _, prop in ipairs(propsCache) do for _, desc in ipairs(prop:GetDescendants()) do if desc:IsA("BasePart") then desc.Color = color end end end
+                end
+            elseif rgbMode == "Disco" then
+                if now - lastShift > 0.2 then
+                    lastShift = now
+                    for _, prop in ipairs(propsCache) do
+                        local color = Color3.fromHSV(math.random(), 1, 1)
+                        for _, desc in ipairs(prop:GetDescendants()) do if desc:IsA("BasePart") then desc.Color = color end end
+                    end
+                end
+            end
+        end
+        RunService.Heartbeat:Wait()
+    end
+end)
+
+
+local walkCycle = 0
+
+function startReplication()
+    currentMechOrigin = nil 
+    local nextNetworkUpdate = 0
+    
+    trackingConnection = RunService.Heartbeat:Connect(function(deltaTime)
+        if not activeTracking then return end
+        
+        local char = lp.Character
+        local rootPart = char and char:FindFirstChild("HumanoidRootPart") :: BasePart
+        local head = char and char:FindFirstChild("Head") :: BasePart
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        
+        if char and rootPart and hum and head then
+            local dynBackwardOffset = CFrame.new(BACKWARD_OFFSET_X, 0, BACKWARD_OFFSET_Z)
+            local dynPropRotation = CFrame.Angles(
+                math.rad(PROP_ROTATION_X - 360), 
+                math.rad(PROP_ROTATION_Y - 360), 
+                math.rad(PROP_ROTATION_Z - 360)
+            )
+
+            if beRobotEnabled then
+                local headProp = propsCache[2]
+                if headProp then workspace.CurrentCamera.CameraSubject = headProp end
+                hum.WalkSpeed = defaultUserWalkSpeed * SCALE_MULTIPLIER
+                hum.JumpPower = defaultUserJumpPower * SCALE_MULTIPLIER
+                hum.UseJumpPower = true
+                hum.HipHeight = defaultUserHipHeight * SCALE_MULTIPLIER 
+                workspace.Gravity = defaultGravity * SCALE_MULTIPLIER
+            else
+                workspace.CurrentCamera.CameraSubject = hum
+                hum.WalkSpeed = defaultUserWalkSpeed
+                hum.JumpPower = defaultUserJumpPower
+                hum.HipHeight = defaultUserHipHeight
+                workspace.Gravity = defaultGravity
+            end
+
+            local _, yaw, _ = rootPart.CFrame:ToEulerAnglesYXZ()
+            local flatCFrame = CFrame.new(rootPart.Position) * CFrame.Angles(0, yaw, 0)
+            local targetOriginFrame
+            
+            if beRobotEnabled then
+                targetOriginFrame = flatCFrame * CFrame.new(0, MECH_HEIGHT_OFFSET, 0)
+            else
+                targetOriginFrame = flatCFrame * dynBackwardOffset * CFrame.new(0, MECH_HEIGHT_OFFSET, 0)
+            end
+            
+            if not currentMechOrigin then 
+                currentMechOrigin = targetOriginFrame 
+            else
+                currentMechOrigin = currentMechOrigin:Lerp(targetOriginFrame, FOLLOW_SMOOTHNESS)
+            end
+            
+          
+            local velocity = rootPart.AssemblyLinearVelocity
+            local currentSpeed = Vector3.new(velocity.X, 0, velocity.Z).Magnitude
+            local isWalking = currentSpeed > 0.5
+            
+            if isWalking then
+                -- Increment walk cycle based on real velocity
+                walkCycle = walkCycle + (currentSpeed / SCALE_MULTIPLIER) * deltaTime * 1.5
+            else
+                -- Smoothly return legs and arms to resting pose
+                walkCycle = walkCycle * 0.95
+            end
+            
+            local idleTime = tick()
+            
+            local idleBob = math.sin(idleTime * 2.5) * 0.05
+            local idleSway = math.sin(idleTime * 1.5) * 0.02
+
+            
+            local bob = isWalking and math.abs(math.sin(walkCycle * 2)) * 0.15 or idleBob
+            local swing = isWalking and math.sin(walkCycle) * 0.8 or idleSway
+            
+            
+            local function S(x, y, z)
+                return CFrame.new(x * SCALE_MULTIPLIER, y * SCALE_MULTIPLIER, z * SCALE_MULTIPLIER)
+            end
+
+            -- Spine 
+            local cf_LowerTorso = currentMechOrigin * S(0, bob, 0) * CFrame.Angles(0, swing * 0.1, 0)
+            local cf_UpperTorso = cf_LowerTorso * S(0, 0.5, 0) * CFrame.Angles(0, 0, -swing * 0.05)
+            local cf_Head = cf_UpperTorso * S(0, 0.9, 0) * CFrame.Angles(0, -swing * 0.1, 0)
+
+            -- Arms 
+            local cf_LeftUpperArm = cf_UpperTorso * S(-1.5, 0.4, 0) * CFrame.Angles(-swing, 0, idleSway)
+            local cf_LeftLowerArm = cf_LeftUpperArm * S(0, -0.8, 0) * CFrame.Angles(-0.1, 0, 0)
+            local cf_LeftHand = cf_LeftLowerArm * S(0, -0.8, 0)
+
+            local cf_RightUpperArm = cf_UpperTorso * S(1.5, 0.4, 0) * CFrame.Angles(swing, 0, -idleSway)
+            local cf_RightLowerArm = cf_RightUpperArm * S(0, -0.8, 0) * CFrame.Angles(-0.1, 0, 0)
+            local cf_RightHand = cf_RightLowerArm * S(0, -0.8, 0)
+
+            -- Legs 
+            local leftKnee = isWalking and (swing < 0 and -swing * 0.8 or 0.1) or 0
+            local rightKnee = isWalking and (swing > 0 and swing * 0.8 or 0.1) or 0
+            
+            local cf_LeftUpperLeg = cf_LowerTorso * S(-0.5, -0.4, 0) * CFrame.Angles(swing, 0, 0)
+            local cf_LeftLowerLeg = cf_LeftUpperLeg * S(0, -0.8, 0) * CFrame.Angles(leftKnee, 0, 0)
+            local cf_LeftFoot = cf_LeftLowerLeg * S(0, -0.8, 0) * CFrame.Angles(-leftKnee, 0, 0) -- Level foot
+
+            local cf_RightUpperLeg = cf_LowerTorso * S(0.5, -0.4, 0) * CFrame.Angles(-swing, 0, 0)
+            local cf_RightLowerLeg = cf_RightUpperLeg * S(0, -0.8, 0) * CFrame.Angles(rightKnee, 0, 0)
+            local cf_RightFoot = cf_RightLowerLeg * S(0, -0.8, 0) * CFrame.Angles(-rightKnee, 0, 0)
+
+            
+            local manualTargetCFrames = {
+                [1] = cf_UpperTorso,
+                [2] = cf_Head,
+                [3] = cf_LeftUpperArm,
+                [4] = cf_LeftLowerArm,
+                [5] = cf_RightUpperArm,
+                [6] = cf_RightLowerArm,
+                [7] = cf_LeftUpperLeg,
+                [8] = cf_LeftLowerLeg,
+                [9] = cf_RightUpperLeg,
+                [10] = cf_RightLowerLeg,
+                [11] = cf_LeftHand,
+                [12] = cf_RightHand,
+                [13] = cf_LowerTorso,
+                [14] = cf_LeftFoot,
+                [15] = cf_RightFoot
+            }
+            
+            
+            local shouldNetworkUpdate = tick() >= nextNetworkUpdate
+            if shouldNetworkUpdate then nextNetworkUpdate = tick() + 0.1 end
+
+            for index, prop in ipairs(propsCache) do
+                if index > 15 then break end
+                local targetCFrame = manualTargetCFrames[index]
+                
+                if targetCFrame then
+                    
+                    local finalPropCFrame = targetCFrame * dynPropRotation
+                    
+                    if prop.PrimaryPart then
+                        prop:SetPrimaryPartCFrame(finalPropCFrame)
+                    end
+                    
+                    local remote = prop:FindFirstChild("SetCurrentCFrame")
+                    if shouldNetworkUpdate and remote and remote:IsA("RemoteFunction") then
+                        task.spawn(function() pcall(function() remote:InvokeServer(finalPropCFrame) end) end)
+                    end
+                end
+            end
+        end
+    end)
+end
