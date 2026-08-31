@@ -19,9 +19,9 @@ local defaultUserHipHeight = hum.HipHeight
 
 -- --- ANACONDA CONFIGURATION & VARIABLES ---
 local SETTINGS = {
-    Gap = 33,
-    Omega = 6.5,
-    Amplitude = 13.2,
+    Gap = 15,
+    Omega = 0.7,
+    Amplitude = 2.5,
     WaveFrequency = 0.4,
     Scale = 11,
     Smoothness = 0.6,
