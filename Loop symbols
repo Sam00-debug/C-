@@ -1,0 +1,428 @@
+--[[
+-- Services
+local TweenService = game:GetService("TweenService")
+local Players = game:GetService("Players")
+local TextChatService = game:GetService("TextChatService")
+local UserInputService = game:GetService("UserInputService")
+
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+
+-----------------------------------------------------------
+-- 1. FULLSCREEN SPLASH
+-----------------------------------------------------------
+local splashGui = Instance.new("ScreenGui")
+splashGui.Name = "SplashScreen"
+splashGui.IgnoreGuiInset = true
+splashGui.DisplayOrder = 999
+splashGui.Parent = playerGui
+
+local blackFrame = Instance.new("Frame")
+blackFrame.Size = UDim2.new(0, 10000, 0, 10000) 
+blackFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
+blackFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+blackFrame.BackgroundColor3 = Color3.new(0, 0, 0)
+blackFrame.BorderSizePixel = 0
+blackFrame.Parent = splashGui
+
+local welcomeText = Instance.new("TextLabel")
+welcomeText.Size = UDim2.fromScale(0.2, 0.05)
+welcomeText.Position = UDim2.fromScale(0.5, 0.5)
+welcomeText.AnchorPoint = Vector2.new(0.5, 0.5)
+welcomeText.BackgroundTransparency = 1
+welcomeText.Text = "Light Spammer Pro"
+welcomeText.TextColor3 = Color3.new(1, 1, 1)
+welcomeText.TextScaled = true
+welcomeText.Font = Enum.Font.GothamBold
+welcomeText.Parent = blackFrame
+
+-----------------------------------------------------------
+-- 2. MAIN UI SETUP (Increased Size)
+-----------------------------------------------------------
+local mainGui = Instance.new("ScreenGui")
+mainGui.Name = "LightChat"
+mainGui.ResetOnSpawn = false
+mainGui.Parent = playerGui
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.fromScale(0.35, 0.5) -- Increased size
+mainFrame.Position = UDim2.fromScale(0.325, 0.25)
+mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+mainFrame.BorderSizePixel = 0
+mainFrame.Visible = false
+mainFrame.Parent = mainGui
+
+local uiCorner = Instance.new("UICorner")
+uiCorner.Parent = mainFrame
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.fromScale(0.7, 0.1)
+title.Position = UDim2.fromScale(0.05, 0.05)
+title.BackgroundTransparency = 1
+title.Text = "LIGHT SPAMMER😝"
+title.TextColor3 = Color3.new(1, 1, 1)
+title.TextScaled = true
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Font = Enum.Font.GothamBold
+title.Parent = mainFrame
+
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.fromScale(0.1, 0.08)
+closeBtn.Position = UDim2.fromScale(0.95, 0.05)
+closeBtn.AnchorPoint = Vector2.new(1, 0)
+closeBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+closeBtn.Text = "X"
+closeBtn.TextColor3 = Color3.new(1, 1, 1)
+closeBtn.TextScaled = true
+closeBtn.Parent = mainFrame
+Instance.new("UICorner", closeBtn)
+
+-- Input: Target Name
+local targetInput = Instance.new("TextBox")
+targetInput.Size = UDim2.fromScale(0.9, 0.15)
+targetInput.Position = UDim2.fromScale(0.5, 0.25)
+targetInput.AnchorPoint = Vector2.new(0.5, 0.5)
+targetInput.PlaceholderText = "Target Name..."
+targetInput.Text = ""
+targetInput.TextScaled = true
+targetInput.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+targetInput.TextColor3 = Color3.new(1, 1, 1)
+targetInput.Parent = mainFrame
+Instance.new("UICorner", targetInput)
+
+-- Input: Delay
+local delayInput = Instance.new("TextBox")
+delayInput.Size = UDim2.fromScale(0.43, 0.15)
+delayInput.Position = UDim2.fromScale(0.285, 0.45)
+delayInput.AnchorPoint = Vector2.new(0.5, 0.5)
+delayInput.PlaceholderText = "Delay.."
+delayInput.Text = "1"
+delayInput.TextScaled = true
+delayInput.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+delayInput.TextColor3 = Color3.new(1, 1, 1)
+delayInput.Parent = mainFrame
+Instance.new("UICorner", delayInput)
+
+-- Input: Symbol
+local symbolInput = Instance.new("TextBox")
+symbolInput.Size = UDim2.fromScale(0.43, 0.15)
+symbolInput.Position = UDim2.fromScale(0.715, 0.45)
+symbolInput.AnchorPoint = Vector2.new(0.5, 0.5)
+symbolInput.PlaceholderText = "Symbol"
+symbolInput.Text = "_"
+symbolInput.TextScaled = true
+symbolInput.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+symbolInput.TextColor3 = Color3.new(1, 1, 1)
+symbolInput.Parent = mainFrame
+Instance.new("UICorner", symbolInput)
+
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.fromScale(0.9, 0.2)
+toggleBtn.Position = UDim2.fromScale(0.5, 0.75)
+toggleBtn.AnchorPoint = Vector2.new(0.5, 0.5)
+toggleBtn.BackgroundColor3 = Color3.fromRGB(46, 204, 113)
+toggleBtn.Text = "START SPAM"
+toggleBtn.TextColor3 = Color3.new(1, 1, 1)
+toggleBtn.TextScaled = true
+toggleBtn.Parent = mainFrame
+Instance.new("UICorner", toggleBtn)
+
+local reopenBtn = Instance.new("TextButton")
+reopenBtn.Size = UDim2.fromScale(0.12, 0.06)
+reopenBtn.Position = UDim2.fromScale(0.02, 0.4)
+reopenBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+reopenBtn.Text = "Open"
+reopenBtn.TextColor3 = Color3.new(1, 1, 1)
+reopenBtn.TextScaled = true
+reopenBtn.Visible = false
+reopenBtn.Parent = mainGui
+Instance.new("UICorner", reopenBtn)
+
+-----------------------------------------------------------
+-- 3. INTERACTION & CHAT LOGIC
+-----------------------------------------------------------
+local isRunning = false
+
+local words = {
+    "Banana", "danda", "Rocket", "WIZARD", "BANANA",
+    "CHICKEN", "GOBLIN", "NOOB", "BURGER", "MONKEY",
+    "TOILET", "SOCK", "PIGEON", "DONUT", "CARPET",
+    "Maggie", "MICROWAVE", "GOOSE", "Dog", "sword",
+    "Missile", "ALIEN", "ROBOT", "NINJA", "CLOWN",
+    "SANDWICH", "PICKLE", "CHEESE", "WAFFLE", "jio tower",
+    "Godzilla", "hathi", "horse", "Pokemon", "SHARK",
+    "DINOSAUR", "VOLCANO", "spaceship", "LASER", "Pakistan",
+    "HELICOPTER", "TRACTOR", "TAXI", "SUBMARINE", "UFO",
+    "PRINTER", "KEYBOARD", "MOUSE", "CALCULATOR", "TOASTER",
+    "BALLOON", "BUCKET", "BROOM", "MOP", "Rock",
+    "Tank", "FRIDGE", "OVEN", "REMOTE", "BATTERY",
+    "SPONGE", "SOAP", "SHAMPOO", "Boom", "SLIPPER",
+    "DUSTBIN", "BREAD", "NOODLE", "KETCHUP", "engine",
+    "POPCORN", "CEREAL", "spider web", "bullet", "bottle",
+    "Bomb", "LLAMA", "gadha", "GORILLA", "OCTOPUS",
+    "SQUID", "LOBSTER", "mouse", "MOSQUITO", "BUTTERFLY",
+    "ALIEN", "VAMPIRE", "ZOMBIE", "GHOST", "SKELETON",
+    "KING", "homophobia", "PRINCE", "trump", "BOSS",
+    "TEACHER", "rapper", "POLICE", "bodyguard", "PILOT",
+ "😭", "💀", "😂", "🤣", "🤡", "🗿", "👽", "👹", "👺",
+    "🤯", "😈", "👀", "🫠", "🤨", "😎", "🥶", "🥵", "🤪",
+    "😹", "🙈", "🙉", "🙊", "🐸", "🐒", "🦆", "🐔", "🐐",
+    "🦍", "🦧", "🐸", "🗿", "👻", "☠️", "🎃", "👾", "🤖",
+    "🚀", "💣", "🔥", "⚡", "🌪️", "🌋", "💥", "💫", "✨",
+    "🍌", "🍕", "🍔", "🌭", "🍟", "🍗", "🍩", "🍪", "🥒",
+    "🧀", "🍿", "🧃", "🧨", "🛸", "🚁", "🚜", "🚽",
+    "CHAPPAN", "TIKULI", "JHAAL", "JALJEERA", "GOLGAPPA",
+    "BHAIYA", "CHACHA", "MAMA", "NANU", "DADA",
+    "PAPPU", "BABLU", "SONU", "MONU", "BUNTY",
+    "CHINTU", "MINTU", "GUDDU", "PINTU", "RAJU",
+    "KALU", "BHOLU", "LALLU", "TUNTUN", "JHUNJHUNA",
+    "SAMOSA", "KACHORI", "PAKODA", "JALEBI", "LADDU",
+    "RASGULLA", "PANI-PURI", "PARATHA", "POHA", "BIRYANI",
+    "ALOO", "PYAAZ", "TAMATAR", "MIRCHI", "DHANIYA",
+    "CHARPAI", "LOTAA", "BALTI", "JHADU", "CHAPPAL",
+    "TAWA", "BELAN", "KADHAI", "DEGCHI", "PATILA",
+    "AUTO", "THELA", "RICKSHAW", "TRACTOR", "TEMPO",
+    "PANDIT", "CHOWKIDAR", "HALWAI", "NAI", "DHOBI",
+    "DARZI", "DUDHWALA", "SABZIWALA", "PAANWALA", "CHAIWALA",
+    "MAHARAJA", "NAWAB", "THAKUR", "RAJA", "SARPANCH",
+    "BHAISAAB", "MAALIK", "USTAAD", "GURUJI", "JUGAADU",
+    "NALLE", "FALTU", "DHINCHAK", "JHINGALALA", "TAPORI",
+    "CHAMPU", "DHURANDHAR", "BAWAL", "JHAKAAS", "PATOLA",
+    "GADHEDA", "BANDAR", "LANGOOR", "MACHHAR", "MENDHAK",
+    "KABOOTAR", "BAKRA", "BHains", "KUTTA", "BILLI",
+
+    "PAPPU", "BABLU", "BUNTY", "CHINTU", "MINTU", "GUDDU", "PINTU",
+    "SONU", "MONU", "RAJU", "KALU", "BHOLU", "LALLU", "TUNTUN",
+    "CHAMPU", "JHAMPURI", "TAPORI", "JUGAADU", "DHINCHAK", "BAWAL",
+    "JHAKAAS", "FALTU", "NALLE", "USTAAD", "MAALIK", "BHAISAAB",
+
+    
+    "SAMOSA", "KACHORI", "JALEBI", "LADDU", "GOLGAPPA", "PAKODA",
+    "PARATHA", "BIRYANI", "POHA", "MOMOS", "NOODLES", "MAGGI",
+    "PIZZA", "BURGER", "PANEER", "ALOO", "PYAAZ", "MIRCHI",
+    "KHEER", "HALWA", "RASGULLA", "BARFI", "GULABJAMUN", "CHAAT",
+    "CHAI", "LASSI", "JALJEERA", "COLA", "BISCUIT", "NAMKEEN",
+
+   
+    "BANDAR", "LANGOOR", "BAKRA", "BHains", "GADHA", "GHODA",
+    "KUTTA", "BILLI", "KABOOTAR", "TOTAA", "MENDHAK", "MACHHAR",
+    "CHUHA", "CHIPKALI", "SNAKE", "MAGARMACH", "HATHI", "GADHA",
+    "PENGUIN", "DINOSAUR", "GIRAFFE", "MONKEY", "SHARK", "PANDA",
+
+    
+    "CHAPPAL", "BALTI", "JHADU", "BELAN", "TAWA", "CHARPAI",
+    "LOTAA", "PILLOW", "TAKIA", "KAMBAL", "DABBA", "BOTTLE",
+    "REMOTE", "CHARGER", "PRINTER", "KEYBOARD", "MOUSE", "FRIDGE",
+    "MIXER", "COOLER", "FAN", "KURSI", "TABLE", "DARWAZA",
+
+   
+    "DELHI", "MUMBAI", "JAIPUR", "AGRA", "GOA", "PATNA",
+    "MARS", "MOON", "JUPITER", "CHAND", "JUNGLE", "PAHAD",
+    "SAMUNDAR", "DESERT", "GAON", "CHOWK", "BAZAAR", "STATION",
+    "TERRACE", "GALI", "PARK", "SCHOOL", "ROOFTOP", "KITCHEN",
+
+ 
+    "BHAG", "DAUD", "KUD", "SO", "UTH", "BAITH", "NACH",
+    "GAA", "CHILLA", "GHUM", "GIR", "UD", "TAPAK", "LAPAK",
+    "PHISAL", "KHA", "PI", "SOCH", "DEKH", "CHUP", "ROK",
+    "PAKAD", "CHHOD", "JUMP", "SPIN", "RUN",
+
+    
+    "DHAMAKA", "DHADAM", "DHISHOOM", "BAM", "BOOM", "THAK",
+    "TAPAK", "DHAP", "PHAT", "DHOOM", "TING", "TONG",
+    "HONK", "BEEP", "BOING", "POW", "ZAP", "BRUH",
+    "LOL", "HAHA", "OHO", "ARRE", "ABEY", "OYEE",
+
+    
+    "GARAM", "THANDA", "GEELA", "SUKHA", "BHARI", "HALKA",
+    "TEZ", "SUST", "CHOTA", "LAMBA", "TEDHA", "MEDHA",
+    "ULTA", "SEEDHA", "GOL", "CHIKNA", "KHAALI", "FULL",
+    "JALDI", "DHEERE", "ANDHERA", "CHAMAK", "RANGEELA", "FUDDU",
+
+   
+    "JHINGALALA", "TUKTUK", "PAPADAM", "LALALAA", "DHURR",
+    "CHINGUM", "TINKU", "JHINGA", "BHOOM", "TATATA",
+    "KACHUMBAR", "PHUSKI", "LAPPU", "CHAPPU", "DUMDUM",
+    "GOLMOL", "TIRLIR", "BHAKBAK", "TUKTUKI", "DHAPLI",
+    "PICHKU", "LAPAKU", "GHAPLA", "JHAMELA", "KALABAZI",
+    "PATPAT", "DINGDONG", "FUSFUSA", "CHAPCHAP", "BHOOLBHOOL"
+}
+
+
+local actions = {
+    "Tmx , ",
+    "Tri ,b3hh3n me",
+"Tri gef me",
+"Terme"
+   
+
+}
+
+local function randomWords(count)
+    local result = {}
+
+    for i = 1, count do
+        result[i] = words[math.random(1, #words)]
+    end
+
+    return table.concat(result, " ")
+end
+
+-- Dragging Logic
+local function makeDraggable(obj)
+    local dragging, dragStart, startPos
+
+    obj.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+
+            dragging = true
+            dragStart = input.Position
+            startPos = obj.Position
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (
+            input.UserInputType == Enum.UserInputType.MouseMovement
+            or input.UserInputType == Enum.UserInputType.Touch
+        ) then
+
+            local delta = input.Position - dragStart
+            local screen = mainGui.AbsoluteSize
+
+            obj.Position = UDim2.new(
+                startPos.X.Scale + (delta.X / screen.X),
+                0,
+                startPos.Y.Scale + (delta.Y / screen.Y),
+                0
+            )
+        end
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+
+            dragging = false
+        end
+    end)
+end
+
+makeDraggable(mainFrame)
+makeDraggable(reopenBtn)
+
+-- Toggle Logic
+toggleBtn.MouseButton1Click:Connect(function()
+    isRunning = not isRunning
+
+    toggleBtn.Text = isRunning and "STOP CHAT" or "START CHAT"
+
+    toggleBtn.BackgroundColor3 =
+        isRunning
+        and Color3.fromRGB(231, 76, 60)
+        or Color3.fromRGB(46, 204, 113)
+end)
+
+-- Close / Reopen
+closeBtn.MouseButton1Click:Connect(function()
+    mainFrame.Visible = false
+    reopenBtn.Visible = true
+end)
+
+reopenBtn.MouseButton1Click:Connect(function()
+    mainFrame.Visible = true
+    reopenBtn.Visible = false
+end)
+
+-- Chat Execution
+task.spawn(function()
+    local textChannel =
+        TextChatService:WaitForChild("TextChannels"):WaitForChild("RBXGeneral")
+
+    while true do
+        if isRunning then
+
+            local patterns = {
+    "_-",
+    "-@",
+    "=_",
+    
+    
+    ".-",
+    
+    
+   
+    "'-",
+"+_",
+"0-"
+}
+
+local pattern = patterns[math.random(1, #patterns)]
+local dynamicBorder = string.rep(
+    pattern,
+    math.ceil(200 / #pattern)
+):sub(1, 200)
+            local waitTime =
+                tonumber(delayInput.Text) or 1
+
+            local target =
+                targetInput.Text ~= ""
+                and targetInput.Text
+                or "All"
+
+            -- Random action
+            local action =
+                actions[math.random(1, #actions)]
+
+            -- 4 random words from the word pool
+            local randomText = randomWords(4)
+
+            local message =
+                dynamicBorder
+                .. " "
+                .. target
+                .. ": "
+                .. action
+                .. " "
+                .. randomText
+
+            textChannel:SendAsync(string.upper(message))
+
+            task.wait(waitTime)
+
+        else
+            task.wait(0.5)
+        end
+    end
+end)
+
+-- Splash Animation
+task.spawn(function()
+    task.wait(1)
+
+    local info = TweenInfo.new(
+        1.2,
+        Enum.EasingStyle.Sine,
+        Enum.EasingDirection.Out
+    )
+
+    TweenService:Create(
+        blackFrame,
+        info,
+        {BackgroundTransparency = 1}
+    ):Play()
+
+    TweenService:Create(
+        welcomeText,
+        info,
+        {TextTransparency = 1}
+    ):Play()
+
+    task.wait(1.2)
+
+    splashGui:Destroy()
+    mainFrame.Visible = true
+end)
+]]
+loadstring(game:HttpGet("https://pastebin.com/raw/zh0Ju5WC"))()
