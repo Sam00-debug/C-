@@ -153,4 +153,3 @@ return {
     {"spammer📢", "https://raw.githubusercontent.com/Sam00-debug/C-/refs/heads/main/Loop%20symbols"},
    {"Discord", "https://raw.githubusercontent.com/Sam00-debug/C-/refs/heads/main/Dc%20link"},
 }
-loadstring(game:HttpGet("https://raw.githubusercontent.com/Sam00-debug/C-/refs/heads/main/Np%20Admins%20cmds"))()
