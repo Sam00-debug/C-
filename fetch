@@ -54,7 +54,7 @@ local BUNDLES = {
 }
 
 local selectedTargetPlayer = nil
-local WAIT_BETWEEN_ITEMS = 0.5 -- Sped up for layered clothing handling
+local WAIT_BETWEEN_ITEMS = 0.1 -- Sped up for layered clothing handling
 local isCancelling = false
 local isEquippingBody = false
 
@@ -517,7 +517,7 @@ copyAvatarBtn.MouseButton1Click:Connect(function()
 				table.insert(finalTargetData.accessory, id)  
 			end  
 		end  
-		if i < scanPasses then task.wait(0.3) end   
+		if i < scanPasses then task.wait(0.1) end   
 	end  
 
 	-- Sync Body Scales and Colors  
