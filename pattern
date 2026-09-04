@@ -37,6 +37,14 @@ local PREDICTION_FACTOR = 0.3
 local lastStartTick = 0
 local angle = 0
 
+local lockedProp = nil
+local lastAutoDuplicate = 0
+local AUTO_DUPLICATE_INTERVAL = 1
+
+
+local LOCKED_PROP_POSITION = Vector3.new(200, 200, 200)
+
+
 -- --- THEME & COLORS ---
 local Colors = {
     Background = Color3.fromRGB(15, 15, 17),
@@ -614,6 +622,8 @@ onBtn.MouseButton1Click:Connect(function()
     activeMode = targetMode
     assignedItems = {}
     voidedPlayers = {}
+    lockedProp = nil
+    lastAutoDuplicate = tick()
     lastStartTick = tick()
 end)
 
@@ -621,6 +631,7 @@ offBtn.MouseButton1Click:Connect(function()
     activeMode = "None"
     assignedItems = {}
     voidedPlayers = {}
+lockedProp = nil
 end)
 
 manualDupBtn.MouseButton1Click:Connect(function()
@@ -797,6 +808,51 @@ local function getRobotOffset(localIdx, globalToggle)
         return CFrame.lookAt(pos, Vector3.new(0, y, 0)) * flip
     end
 end
+
+local function maintainLockedProp()
+    if activeMode ~= "Robot" and activeMode ~= "Chair" then
+        lockedProp = nil
+        return
+    end
+
+    updatePropsCache()
+
+    -- Choose one prop to remain locked.
+    if not lockedProp or not lockedProp.Parent then
+        lockedProp = propsCache[1]
+    end
+
+    if lockedProp and lockedProp.Parent then
+        pcall(function()
+            lockedProp:PivotTo(CFrame.new(LOCKED_PROP_POSITION))
+        end)
+    end
+end
+
+task.spawn(function()
+    while gui.Parent do
+        if activeMode == "Robot" or activeMode == "Chair" then
+            maintainLockedProp()
+
+            if tick() - lastAutoDuplicate >= AUTO_DUPLICATE_INTERVAL then
+                lastAutoDuplicate = tick()
+
+                --duplication function 
+for i = 1, 13 do
+task.spawn(function() pcall(function() duplicateRemote:InvokeServer() end) end)
+task.wait(0.05)
+end
+
+
+
+            end
+        else
+            lockedProp = nil
+        end
+
+        task.wait(0.1)
+    end
+end)
 
 -- --- MASTER EXECUTION LOOP ---
 RunService.Heartbeat:Connect(function()
