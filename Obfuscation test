@@ -142,14 +142,12 @@ return {
     {"music🎵", "https://raw.githubusercontent.com/Sam00-debug/Perugius-hub-v1/refs/heads/main/Falcon"},
     {"premium💎", "https://raw.githubusercontent.com/Sam00-debug/C-/refs/heads/main/Received%20item"},
     {"protection🛡️", "https://raw.githubusercontent.com/Sam00-debug/C-/refs/heads/main/Noclip%20shield"},
-    {"join players⛩️", "https://raw.githubusercontent.com/Sam00-debug/C-/refs/heads/main/invite"},
 
     {"avatars👤", "https://raw.githubusercontent.com/Sam00-debug/C-/refs/heads/main/fetch"},
     {"Emotes🕺🏻", "https://raw.githubusercontent.com/Sam00-debug/C-/refs/heads/main/Cat%20api"},
     {"secret places🗺️", "https://raw.githubusercontent.com/Sam00-debug/C-/refs/heads/main/Tp"},
     {"antibang🛡️", "https://raw.githubusercontent.com/Sam00-debug/C-/refs/heads/main/Root%20rotation"},
     {"op bang💥", "https://raw.githubusercontent.com/Sam00-debug/C-/refs/heads/main/Op"},
-    {"fake hover board🛹", "https://raw.githubusercontent.com/Sam00-debug/C-/refs/heads/main/Fake%20hover%20board"},
-    {"spammer📢", "https://raw.githubusercontent.com/Sam00-debug/C-/refs/heads/main/Loop%20symbols"},
+        {"spammer📢", "https://raw.githubusercontent.com/Sam00-debug/C-/refs/heads/main/Loop%20symbols"},
    {"Discord", "https://raw.githubusercontent.com/Sam00-debug/C-/refs/heads/main/Dc%20link"},
 }
