@@ -1,7 +1,4 @@
--- ==========================================
---    MODERN FOLLOWER/EMOTE HUB
---    Lead Designer/Dev: AI Assistant
--- ==========================================
+-- op bang
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -10,7 +7,7 @@ local CoreGui = game:GetService("CoreGui")
 
 local lp = Players.LocalPlayer
 
--- --- STATE VARIABLES ---
+-- --- VARIABLES ---
 local state = {
     isRunning = false,
     selectedTargets = {}, -- Array of Player objects
@@ -27,7 +24,7 @@ local state = {
 
 local animId = "121803583995185"
 
--- --- CLEANUP SYSTEM ---
+
 local function cleanUp()
     state.isRunning = false
     for _, conn in ipairs(state.connections) do
@@ -47,7 +44,7 @@ local function cleanUp()
     end
 end
 
--- --- EMOTE LOGIC ---
+-- --- LOGIC ---
 local function applyEmote()
     local char = lp.Character
     if not char then return end
@@ -96,14 +93,14 @@ local function stopEmote()
 end
 
 -- --- UI CREATION ---
-local gui = Instance.new("ScreenGui")
+locaInstance.new("ScreenGui")
 gui.Name = "ModernFollowerUI"
 gui.ResetOnSpawn = false
--- Fallback if executor doesn't support CoreGui
+-- Fallback 
 pcall(function() gui.Parent = CoreGui end)
 if not gui.Parent then gui.Parent = lp:WaitForChild("PlayerGui") end
 
--- Helper: Rounded Frames
+-- Helper: 
 local function createFrame(parent, size, pos, color, radius)
     local f = Instance.new("Frame", parent)
     f.Size = size
@@ -117,7 +114,7 @@ local function createFrame(parent, size, pos, color, radius)
     return f
 end
 
--- Main Window
+--  Window
 local mainFrame = createFrame(gui, UDim2.fromOffset(300, 360), UDim2.fromScale(0.5, 0.5), Color3.fromRGB(20, 20, 24), 8)
 mainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 local mainStroke = Instance.new("UIStroke", mainFrame)
@@ -133,7 +130,7 @@ local title = Instance.new("TextLabel", header)
 title.Size = UDim2.new(1, -70, 1, 0)
 title.Position = UDim2.new(0, 15, 0, 0)
 title.BackgroundTransparency = 1
-title.Text = "Follower Hub"
+title.Text = "OP BANG [NP]"
 title.TextColor3 = Color3.new(1, 1, 1)
 title.Font = Enum.Font.GothamBold
 title.TextSize = 14
@@ -147,6 +144,7 @@ closeBtn.Text = "-"
 closeBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
 closeBtn.Font = Enum.Font.GothamBold
 closeBtn.TextSize = 20
+closeBtn.ZIndex = 99
 
 local destroyBtn = Instance.new("TextButton", header)
 destroyBtn.Size = UDim2.new(0, 30, 0, 30)
@@ -156,8 +154,9 @@ destroyBtn.Text = "X"
 destroyBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
 destroyBtn.Font = Enum.Font.GothamBold
 destroyBtn.TextSize = 16
+destroyBtn.ZIndex = 99
 
--- Open Button (Minimized State)
+-- Open Button 
 local openBtn = createFrame(gui, UDim2.fromOffset(45, 45), UDim2.fromScale(0.1, 0.5), Color3.fromRGB(30, 30, 35), 25)
 openBtn.AnchorPoint = Vector2.new(0, 0.5)
 openBtn.Visible = false
@@ -166,11 +165,11 @@ openStroke.Color = Color3.fromRGB(60, 60, 70)
 local openBtnHitbox = Instance.new("TextButton", openBtn)
 openBtnHitbox.Size = UDim2.fromScale(1, 1)
 openBtnHitbox.BackgroundTransparency = 1
-openBtnHitbox.Text = "👁"
+openBtnHitbox.Text = "😝"
 openBtnHitbox.TextSize = 20
 openBtnHitbox.TextColor3 = Color3.new(1,1,1)
 
--- Targets Panel (Overlays Main)
+-- Targets Panel
 local targetFrame = createFrame(mainFrame, UDim2.fromScale(1, 1), UDim2.new(0, 0, 0, 0), Color3.fromRGB(20, 20, 24), 8)
 targetFrame.Visible = false
 targetFrame.ZIndex = 10
@@ -195,7 +194,7 @@ updateListBtn.Size = UDim2.new(1, -20, 0, 30)
 updateListBtn.Position = UDim2.new(0, 10, 0, 45)
 updateListBtn.BackgroundColor3 = Color3.fromRGB(40, 120, 200)
 Instance.new("UICorner", updateListBtn).CornerRadius = UDim.new(0, 4)
-updateListBtn.Text = "Refresh Player List"
+updateListBtn.Text = "Refresh List"
 updateListBtn.TextColor3 = Color3.new(1, 1, 1)
 updateListBtn.Font = Enum.Font.GothamBold
 updateListBtn.TextSize = 13
@@ -210,7 +209,7 @@ scrollFrame.ZIndex = 11
 local listLayout = Instance.new("UIListLayout", scrollFrame)
 listLayout.Padding = UDim.new(0, 5)
 
--- Main Body Elements
+-- Main Body 
 local body = createFrame(mainFrame, UDim2.new(1, 0, 1, -35), UDim2.new(0, 0, 0, 35), Color3.fromRGB(20, 20, 24), 8)
 
 local selectTargetsBtn = Instance.new("TextButton", body)
@@ -228,7 +227,7 @@ local posLabel = Instance.new("TextLabel", body)
 posLabel.Size = UDim2.new(1, -30, 0, 20)
 posLabel.Position = UDim2.new(0, 15, 0, 60)
 posLabel.BackgroundTransparency = 1
-posLabel.Text = "Position Mode"
+posLabel.Text = "Position "
 posLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
 posLabel.Font = Enum.Font.GothamBold
 posLabel.TextSize = 12
@@ -239,7 +238,7 @@ btnFront.Size = UDim2.new(0.5, -20, 0, 30)
 btnFront.Position = UDim2.new(0, 15, 0, 85)
 btnFront.BackgroundColor3 = Color3.fromRGB(40, 120, 200) -- Selected
 Instance.new("UICorner", btnFront).CornerRadius = UDim.new(0, 4)
-btnFront.Text = "Front"
+btnFront.Text = "Mouth"
 btnFront.TextColor3 = Color3.new(1, 1, 1)
 btnFront.Font = Enum.Font.GothamBold
 btnFront.TextSize = 13
@@ -254,7 +253,7 @@ btnBack.TextColor3 = Color3.fromRGB(150, 150, 150)
 btnBack.Font = Enum.Font.GothamBold
 btnBack.TextSize = 13
 
--- Helper: Create Slider
+-- Helper:  Slider
 local function createSlider(parent, text, yPos, min, max, default, isFloat, callback)
     local label = Instance.new("TextLabel", parent)
     label.Size = UDim2.new(1, -30, 0, 20)
@@ -315,7 +314,7 @@ startBtn.TextColor3 = Color3.new(1, 1, 1)
 startBtn.Font = Enum.Font.GothamBlack
 startBtn.TextSize = 18
 
--- --- DRAGGING SYSTEM ---
+-- --- DRAGGING 
 local function makeDraggable(topbar, obj)
     local dragToggle, dragStart, startPos
     topbar.InputBegan:Connect(function(input)
@@ -338,9 +337,9 @@ end
 makeDraggable(header, mainFrame)
 makeDraggable(openBtn, openBtn)
 
--- --- BUTTON LOGIC ---
+-- --- BUTTON LOGIC
 btnFront.MouseButton1Click:Connect(function()
-    state.positionMode = "Front"
+    state.positionMode = "Mouth"
     btnFront.BackgroundColor3 = Color3.fromRGB(40, 120, 200)
     btnFront.TextColor3 = Color3.new(1,1,1)
     btnBack.BackgroundColor3 = Color3.fromRGB(35, 35, 40)
@@ -387,13 +386,13 @@ local function buildPlayerList()
             dName.ZIndex = 12
             
             local uName = Instance.new("TextLabel", btnContainer)
-            uName.Size = UDim2.new(1, -10, 0.4, 0)
+            uName.Size = UDim2.new(1, -10, 0.5, 0)
             uName.Position = UDim2.new(0, 10, 0.6, 0)
             uName.BackgroundTransparency = 1
             uName.Text = "@" .. plr.Name
-            uName.TextColor3 = Color3.fromRGB(170, 170, 170)
+            uName.TextColor3 = Color3.fromRGB(1,1,1)
             uName.Font = Enum.Font.Gotham
-            uName.TextSize = 11
+            uName.TextSize = 12
             uName.TextXAlignment = Enum.TextXAlignment.Left
             uName.ZIndex = 12
             
@@ -420,7 +419,7 @@ local function buildPlayerList()
 end
 updateListBtn.MouseButton1Click:Connect(buildPlayerList)
 
--- If target leaves, remove from list safely
+-- If target leaves, 
 table.insert(state.connections, Players.PlayerRemoving:Connect(function(plr)
     local idx = table.find(state.selectedTargets, plr)
     if idx then
@@ -448,7 +447,7 @@ startBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Detect Respawn of LocalPlayer to re-apply animations
+--  Respawn of LocalPlayer 
 table.insert(state.connections, lp.CharacterAdded:Connect(function(char)
     if state.isRunning then
         -- Wait slightly for animator to build
@@ -458,7 +457,7 @@ table.insert(state.connections, lp.CharacterAdded:Connect(function(char)
     end
 end))
 
--- --- MAIN PHYSICS / NOCLIP LOOP ---
+-- --- main loop
 table.insert(state.connections, RunService.Stepped:Connect(function()
     if not state.isRunning then return end
     
@@ -467,7 +466,7 @@ table.insert(state.connections, RunService.Stepped:Connect(function()
         local hum = char:FindFirstChildOfClass("Humanoid")
         if hum then hum.Sit = false end
         
-        -- Noclip logic
+        -- Noclip 
         for _, part in ipairs(char:GetDescendants()) do
             if part:IsA("BasePart") then
                 part.CanCollide = false
@@ -479,7 +478,7 @@ end))
 table.insert(state.connections, RunService.Heartbeat:Connect(function()
     if not state.isRunning or #state.selectedTargets == 0 then return end
     
-    -- Interval Switching Logic
+    -- Interval Switching 
     if tick() - state.lastSwitchTime >= state.switchInterval then
         state.currentTargetIndex = state.currentTargetIndex + 1
         if state.currentTargetIndex > #state.selectedTargets then
