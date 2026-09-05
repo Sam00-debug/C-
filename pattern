@@ -286,28 +286,56 @@ local function refreshPlayers()
 
 for _, plr in ipairs(Players:GetPlayers()) do
     if not excludedUsers[plr.Name] then
-        local btn = Instance.new("TextButton", playerScroll)
-        btn.Size = UDim2.new(1, -2, 0, 22)
-        btn.BackgroundColor3 = selectedPlayers[plr] and Colors.Primary or Colors.Surface
-        btn.Text = " " .. plr.DisplayName
-        btn.TextColor3 = selectedPlayers[plr] and Color3.new(0,0,0) or Colors.Text
-        btn.Font = Enum.Font.GothamSemibold
-        btn.TextSize = 9
-        btn.TextXAlignment = Enum.TextXAlignment.Left
-        btn.ZIndex = 22
-        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
-        
-        btn.MouseButton1Click:Connect(function()
-            if selectedPlayers[plr] then
-                selectedPlayers[plr] = nil
-                btn.BackgroundColor3 = Colors.Surface
-                btn.TextColor3 = Colors.Text
-            else
-                selectedPlayers[plr] = true
-                btn.BackgroundColor3 = Colors.Primary
-                btn.TextColor3 = Color3.new(0,0,0)
-            end
-        end)
+        local btn = Instance.new("TextButton")
+btn.Parent = playerScroll
+btn.Size = UDim2.new(1, -2, 0, 38)
+btn.BackgroundColor3 = selectedPlayers[plr] and Colors.Primary or Colors.Surface
+btn.Text = ""
+btn.AutoButtonColor = false
+btn.ZIndex = 22
+
+Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
+
+-- Display Name
+local displayLabel = Instance.new("TextLabel")
+displayLabel.Parent = btn
+displayLabel.BackgroundTransparency = 1
+displayLabel.Position = UDim2.new(0, 8, 0, 2)
+displayLabel.Size = UDim2.new(1, -10, 0, 18)
+displayLabel.Text = plr.DisplayName
+displayLabel.TextColor3 = selectedPlayers[plr] and Color3.new(0, 0, 0) or Colors.Text
+displayLabel.Font = Enum.Font.GothamSemibold
+displayLabel.TextSize = 10
+displayLabel.TextXAlignment = Enum.TextXAlignment.Left
+displayLabel.ZIndex = 23
+
+-- Username
+local usernameLabel = Instance.new("TextLabel")
+usernameLabel.Parent = btn
+usernameLabel.BackgroundTransparency = 1
+usernameLabel.Position = UDim2.new(0, 8, 0, 19)
+usernameLabel.Size = UDim2.new(1, -10, 0, 15)
+usernameLabel.Text = "@" .. plr.Name
+usernameLabel.TextColor3 = selectedPlayers[plr] and Color3.fromRGB(40, 40, 40) or Color3.fromRGB(150, 150, 150)
+usernameLabel.Font = Enum.Font.Gotham
+usernameLabel.TextSize = 8
+usernameLabel.TextXAlignment = Enum.TextXAlignment.Left
+usernameLabel.ZIndex = 23
+
+btn.MouseButton1Click:Connect(function()
+    if selectedPlayers[plr] then
+        selectedPlayers[plr] = nil
+        btn.BackgroundColor3 = Colors.Surface
+        displayLabel.TextColor3 = Colors.Text
+        usernameLabel.TextColor3 = Color3.fromRGB(150, 150, 150)
+    else
+        selectedPlayers[plr] = true
+        btn.BackgroundColor3 = Colors.Primary
+        displayLabel.TextColor3 = Color3.new(0, 0, 0)
+        usernameLabel.TextColor3 = Color3.fromRGB(40, 40, 40)
+    end
+end)
+
     end
 end
 end
