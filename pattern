@@ -310,6 +310,7 @@ for _, plr in ipairs(Players:GetPlayers()) do
         end)
     end
 end
+end
 Players.PlayerAdded:Connect(refreshPlayers); Players.PlayerRemoving:Connect(refreshPlayers); refreshPlayers()
 
 -- --- POPULATE REVOLVE & ROTATE ---
