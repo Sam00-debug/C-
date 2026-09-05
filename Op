@@ -1,0 +1,515 @@
+-- SERVICES 
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local CoreGui = game:GetService("CoreGui")
+
+-- VARIABLES
+local lp = Players.LocalPlayer
+local char, root, hum
+local selectedTargets = {} -- Table to hold multiple target players
+local currentTargetIndex = 1
+local lastSwitchTime = tick()
+
+local running = false
+local currentTrack = nil
+local connections = {} -- To store events for clean destruction
+
+-- SETTINGS
+local animId = "121803583995185"
+local emoteSpeed = 1
+local switchInterval = 0.5
+local positionMode = "Front" -- "Front" or "Back"
+
+-- ==========================================
+-- CHARACTER & EMOTE LOGIC
+-- ==========================================
+local function toggleEmote(shouldPlay)
+    if not char or not hum then return end
+    local animator = hum:FindFirstChildOfClass("Animator") or hum:WaitForChild("Animator", 2)
+    local animateScript = char:FindFirstChild("Animate")
+
+    if shouldPlay then
+        if animateScript then animateScript.Disabled = true end
+        
+        for _, t in pairs(animator:GetPlayingAnimationTracks()) do
+            t:Stop(0.1)
+        end
+
+        local success, objects = pcall(function() 
+            return game:GetObjects("rbxassetid://" .. animId) 
+        end)
+
+        local animation
+        if success and objects[1] and objects[1]:IsA("Animation") then
+            animation = objects[1]
+        else
+            animation = Instance.new("Animation")
+            animation.AnimationId = "rbxassetid://" .. animId
+        end
+
+        currentTrack = animator:LoadAnimation(animation)
+        currentTrack.Priority = Enum.AnimationPriority.Action4
+        currentTrack.Looped = true
+        currentTrack:Play()
+        currentTrack:AdjustSpeed(emoteSpeed)
+    else
+        if currentTrack then
+            currentTrack:Stop(0.1)
+            currentTrack = nil
+        end
+        if animateScript then animateScript.Disabled = false end
+    end
+end
+
+local function bindCharacter(c)
+    char = c
+    root = char:WaitForChild("HumanoidRootPart", 3)
+    hum = char:WaitForChild("Humanoid", 3)
+    
+    if running then
+        task.wait(0.5) -- Wait for load
+        toggleEmote(true)
+    end
+end
+
+if lp.Character then bindCharacter(lp.Character) end
+table.insert(connections, lp.CharacterAdded:Connect(bindCharacter))
+
+
+-- ==========================================
+-- UI CONSTRUCTION
+-- ==========================================
+local gui = Instance.new("ScreenGui")
+gui.Name = "ModernBangUI"
+gui.ResetOnSpawn = false
+-- Fallback for exploiters vs studio testing
+local success = pcall(function() gui.Parent = CoreGui end)
+if not success then gui.Parent = lp:WaitForChild("PlayerGui") end
+
+-- Shared UI Functions
+local function MakeCorner(parent, radius)
+    local corner = Instance.new("UICorner", parent)
+    corner.CornerRadius = UDim.new(0, radius or 8)
+    return corner
+end
+
+local function MakeDraggable(topbar, obj)
+    local dragging, dragInput, dragStart, startPos
+    table.insert(connections, topbar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = obj.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            end)
+        end
+    end))
+    table.insert(connections, topbar.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end
+    end))
+    table.insert(connections, UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            obj.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end))
+end
+
+-- MAIN FRAME
+local mainFrame = Instance.new("Frame", gui)
+mainFrame.Size = UDim2.new(0, 260, 0, 320)
+mainFrame.Position = UDim2.new(0.5, -130, 0.5, -160)
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+mainFrame.BorderSizePixel = 0
+mainFrame.ClipsDescendants = true
+MakeCorner(mainFrame)
+MakeDraggable(mainFrame, mainFrame)
+
+local title = Instance.new("TextLabel", mainFrame)
+title.Size = UDim2.new(1, -60, 0, 40)
+title.Position = UDim2.new(0, 10, 0, 0)
+title.BackgroundTransparency = 1
+title.Text = "Nothing Bang 🖕🏻"
+title.TextColor3 = Color3.fromRGB(255, 255, 255)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 16
+title.TextXAlignment = Enum.TextXAlignment.Left
+
+local closeBtn = Instance.new("TextButton", mainFrame)
+closeBtn.Size = UDim2.new(0, 30, 0, 30)
+closeBtn.Position = UDim2.new(1, -60, 0, 5)
+closeBtn.Text = "-"
+closeBtn.BackgroundTransparency = 1
+closeBtn.TextColor3 = Color3.fromRGB(150, 150, 150)
+closeBtn.Font = Enum.Font.GothamBold
+closeBtn.TextSize = 20
+
+local killBtn = Instance.new("TextButton", mainFrame)
+killBtn.Size = UDim2.new(0, 30, 0, 30)
+killBtn.Position = UDim2.new(1, -30, 0, 5)
+killBtn.Text = "X"
+killBtn.BackgroundTransparency = 1
+killBtn.TextColor3 = Color3.fromRGB(255, 75, 75)
+killBtn.Font = Enum.Font.GothamBold
+killBtn.TextSize = 16
+
+-- OPEN BUTTON (Minimized)
+local openBtn = Instance.new("TextButton", gui)
+openBtn.Size = UDim2.new(0, 50, 0, 50)
+openBtn.Position = UDim2.new(0.05, 0, 0.5, -25)
+openBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+openBtn.Text = "🥵"
+openBtn.TextSize = 25
+openBtn.Visible = false
+MakeCorner(openBtn, 25)
+MakeDraggable(openBtn, openBtn)
+
+-- CONTENT FRAME
+local contentLayout = Instance.new("UIListLayout", mainFrame)
+contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
+contentLayout.Padding = UDim.new(0, 10)
+contentLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+
+local spacer = Instance.new("Frame", mainFrame)
+spacer.Size = UDim2.new(1, 0, 0, 30)
+spacer.BackgroundTransparency = 1
+
+local selectTargetsBtn = Instance.new("TextButton", mainFrame)
+selectTargetsBtn.Size = UDim2.new(0.9, 0, 0, 35)
+selectTargetsBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+selectTargetsBtn.Text = "Select Targets (0)"
+selectTargetsBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+selectTargetsBtn.Font = Enum.Font.GothamBold
+selectTargetsBtn.TextSize = 14
+MakeCorner(selectTargetsBtn)
+
+-- POSITION TOGGLE (Front/Back)
+local posFrame = Instance.new("Frame", mainFrame)
+posFrame.Size = UDim2.new(0.9, 0, 0, 35)
+posFrame.BackgroundTransparency = 1
+
+local frontBtn = Instance.new("TextButton", posFrame)
+frontBtn.Size = UDim2.new(0.48, 0, 1, 0)
+frontBtn.BackgroundColor3 = Color3.fromRGB(80, 150, 80) -- Active default
+frontBtn.Text = "Front"
+frontBtn.TextColor3 = Color3.fromRGB(255,255,255)
+frontBtn.Font = Enum.Font.GothamBold
+frontBtn.TextSize = 14
+MakeCorner(frontBtn)
+
+local backBtn = Instance.new("TextButton", posFrame)
+backBtn.Size = UDim2.new(0.48, 0, 1, 0)
+backBtn.Position = UDim2.new(0.52, 0, 0, 0)
+backBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+backBtn.Text = "Back"
+backBtn.TextColor3 = Color3.fromRGB(255,255,255)
+backBtn.Font = Enum.Font.GothamBold
+backBtn.TextSize = 14
+MakeCorner(backBtn)
+
+-- SLIDER CREATOR FUNCTION
+local function CreateSlider(parent, titleText, minVal, maxVal, defaultVal, isFloat, callback)
+    local frame = Instance.new("Frame", parent)
+    frame.Size = UDim2.new(0.9, 0, 0, 45)
+    frame.BackgroundTransparency = 1
+
+    local lbl = Instance.new("TextLabel", frame)
+    lbl.Size = UDim2.new(1, 0, 0, 20)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = titleText .. ": " .. tostring(defaultVal)
+    lbl.TextColor3 = Color3.fromRGB(200, 200, 200)
+    lbl.Font = Enum.Font.Gotham
+    lbl.TextSize = 13
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+
+    local bg = Instance.new("Frame", frame)
+    bg.Size = UDim2.new(1, 0, 0, 10)
+    bg.Position = UDim2.new(0, 0, 0, 25)
+    bg.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+    MakeCorner(bg, 5)
+
+    local fill = Instance.new("Frame", bg)
+    fill.Size = UDim2.new((defaultVal - minVal) / (maxVal - minVal), 0, 1, 0)
+    fill.BackgroundColor3 = Color3.fromRGB(100, 150, 255)
+    MakeCorner(fill, 5)
+
+    local dragging = false
+    local function update(input)
+        local pos = math.clamp((input.Position.X - bg.AbsolutePosition.X) / bg.AbsoluteSize.X, 0, 1)
+        fill.Size = UDim2.new(pos, 0, 1, 0)
+        local val = minVal + pos * (maxVal - minVal)
+        if not isFloat then val = math.floor(val) else val = math.floor(val * 100) / 100 end
+        lbl.Text = titleText .. ": " .. tostring(val)
+        callback(val)
+    end
+
+    table.insert(connections, bg.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true; update(input)
+        end
+    end))
+    table.insert(connections, UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            update(input)
+        end
+    end))
+    table.insert(connections, UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end))
+end
+
+CreateSlider(mainFrame, "Emote Speed", 1, 30, 1, false, function(val)
+    emoteSpeed = val
+    if currentTrack then currentTrack:AdjustSpeed(emoteSpeed) end
+end)
+
+CreateSlider(mainFrame, "Interval (s)", 0.05, 1, 0.5, true, function(val)
+    switchInterval = val
+end)
+
+local startBtn = Instance.new("TextButton", mainFrame)
+startBtn.Size = UDim2.new(0.9, 0, 0, 40)
+startBtn.BackgroundColor3 = Color3.fromRGB(40, 150, 80)
+startBtn.Text = "START"
+startBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+startBtn.Font = Enum.Font.GothamBold
+startBtn.TextSize = 16
+MakeCorner(startBtn)
+
+-- TARGETS FRAME
+local targetFrame = Instance.new("Frame", gui)
+targetFrame.Size = UDim2.new(0, 260, 0, 320)
+targetFrame.Position = mainFrame.Position
+targetFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+targetFrame.Visible = false
+targetFrame.BorderSizePixel = 0
+MakeCorner(targetFrame)
+MakeDraggable(targetFrame, targetFrame)
+
+local targetHeader = Instance.new("Frame", targetFrame)
+targetHeader.Size = UDim2.new(1, 0, 0, 40)
+targetHeader.BackgroundTransparency = 1
+
+local backToMainBtn = Instance.new("TextButton", targetHeader)
+backToMainBtn.Size = UDim2.new(0, 40, 1, 0)
+backToMainBtn.BackgroundTransparency = 1
+backToMainBtn.Text = "<"
+backToMainBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+backToMainBtn.Font = Enum.Font.GothamBold
+backToMainBtn.TextSize = 20
+
+local updateListBtn = Instance.new("TextButton", targetHeader)
+updateListBtn.Size = UDim2.new(0, 100, 0, 26)
+updateListBtn.Position = UDim2.new(1, -110, 0, 7)
+updateListBtn.BackgroundColor3 = Color3.fromRGB(60, 100, 200)
+updateListBtn.Text = "Refresh List"
+updateListBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+updateListBtn.Font = Enum.Font.GothamBold
+updateListBtn.TextSize = 12
+MakeCorner(updateListBtn, 4)
+
+local playerList = Instance.new("ScrollingFrame", targetFrame)
+playerList.Size = UDim2.new(1, -20, 1, -50)
+playerList.Position = UDim2.new(0, 10, 0, 45)
+playerList.BackgroundTransparency = 1
+playerList.ScrollBarThickness = 4
+playerList.UIListLayout = Instance.new("UIListLayout", playerList)
+playerList.UIListLayout.Padding = UDim.new(0, 5)
+
+-- ==========================================
+-- LOGIC & EVENTS
+-- ==========================================
+
+-- Populate Player List
+local function populatePlayers()
+    for _, child in ipairs(playerList:GetChildren()) do
+        if child:IsA("Frame") then child:Destroy() end
+    end
+    local excludedUsers = {
+        Nothing_sam00 = true,
+        Kausarali2 = true,
+        mob_one00 = true,
+        cutie143198 = true
+    }
+    local ySize = 0
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if plr ~= lp and not excludedUsers[plr.Name] then
+            local btnFrame = Instance.new("Frame", playerList)
+            btnFrame.Size = UDim2.new(1, 0, 0, 40)
+            btnFrame.BackgroundColor3 = table.find(selectedTargets, plr) and Color3.fromRGB(80, 120, 180) or Color3.fromRGB(45, 45, 55)
+            MakeCorner(btnFrame, 6)
+            
+            local btn = Instance.new("TextButton", btnFrame)
+            btn.Size = UDim2.new(1,0,1,0)
+            btn.BackgroundTransparency = 1
+            btn.Text = ""
+            
+            local dName = Instance.new("TextLabel", btnFrame)
+            dName.Size = UDim2.new(1, -10, 0, 20)
+            dName.Position = UDim2.new(0, 10, 0, 2)
+            dName.BackgroundTransparency = 1
+            dName.Text = plr.DisplayName
+            dName.TextColor3 = Color3.fromRGB(255, 255, 255)
+            dName.Font = Enum.Font.GothamBold
+            dName.TextSize = 14
+            dName.TextXAlignment = Enum.TextXAlignment.Left
+            
+            local uName = Instance.new("TextLabel", btnFrame)
+            uName.Size = UDim2.new(1, -10, 0, 16)
+            uName.Position = UDim2.new(0, 10, 0, 20)
+            uName.BackgroundTransparency = 1
+            uName.Text = "@" .. plr.Name
+            uName.TextColor3 = Color3.fromRGB(180, 180, 180)
+            uName.Font = Enum.Font.Gotham
+            uName.TextSize = 11
+            uName.TextXAlignment = Enum.TextXAlignment.Left
+
+            table.insert(connections, btn.MouseButton1Click:Connect(function()
+                local idx = table.find(selectedTargets, plr)
+                if idx then
+                    table.remove(selectedTargets, idx)
+                    btnFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 55)
+                else
+                    table.insert(selectedTargets, plr)
+                    btnFrame.BackgroundColor3 = Color3.fromRGB(80, 120, 180)
+                end
+                selectTargetsBtn.Text = "Select Targets (" .. #selectedTargets .. ")"
+            end))
+            ySize = ySize + 45
+        end
+    end
+    playerList.CanvasSize = UDim2.new(0, 0, 0, ySize)
+endend
+
+-- Button Bindings
+selectTargetsBtn.MouseButton1Click:Connect(function()
+    mainFrame.Visible = false
+    targetFrame.Visible = true
+    targetFrame.Position = mainFrame.Position
+    populatePlayers()
+end)
+
+backToMainBtn.MouseButton1Click:Connect(function()
+    targetFrame.Visible = false
+    mainFrame.Visible = true
+    mainFrame.Position = targetFrame.Position
+end)
+
+updateListBtn.MouseButton1Click:Connect(populatePlayers)
+
+frontBtn.MouseButton1Click:Connect(function()
+    positionMode = "Front"
+    frontBtn.BackgroundColor3 = Color3.fromRGB(80, 150, 80)
+    backBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+end)
+
+backBtn.MouseButton1Click:Connect(function()
+    positionMode = "Back"
+    backBtn.BackgroundColor3 = Color3.fromRGB(80, 150, 80)
+    frontBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+end)
+
+closeBtn.MouseButton1Click:Connect(function() 
+    mainFrame.Visible = false; targetFrame.Visible = false; openBtn.Visible = true 
+end)
+
+openBtn.MouseButton1Click:Connect(function() 
+    mainFrame.Visible = true; openBtn.Visible = false 
+end)
+
+-- Main Toggle
+startBtn.MouseButton1Click:Connect(function()
+    if #selectedTargets == 0 then return end
+    running = not running
+    
+    if running then
+        startBtn.BackgroundColor3 = Color3.fromRGB(180, 50, 50)
+        startBtn.Text = "STOP"
+        toggleEmote(true)
+    else
+        startBtn.BackgroundColor3 = Color3.fromRGB(40, 150, 80)
+        startBtn.Text = "START"
+        toggleEmote(false)
+    end
+end)
+
+-- ==========================================
+-- PHYSICS & TELEPORT LOOP
+-- ==========================================
+
+-- Removing Collisions and Sit property seamlessly so we don't glitch or bounce off the target
+table.insert(connections, RunService.Stepped:Connect(function()
+    if running and char then
+        if hum then hum.Sit = false end
+        for _, part in ipairs(char:GetDescendants()) do
+            if part:IsA("BasePart") and part.CanCollide then
+                part.CanCollide = false
+            end
+        end
+    end
+end))
+
+table.insert(connections, RunService.Heartbeat:Connect(function()
+    if running and #selectedTargets > 0 and root then
+        -- Handle Interval Switching
+        if #selectedTargets > 1 and tick() - lastSwitchTime >= switchInterval then
+            currentTargetIndex = currentTargetIndex + 1
+            if currentTargetIndex > #selectedTargets then currentTargetIndex = 1 end
+            lastSwitchTime = tick()
+        end
+        
+        -- Get Active Target
+        local target = selectedTargets[currentTargetIndex]
+        if not target then return end
+
+        local tChar = target.Character
+        if tChar then
+            local tHead = tChar:FindFirstChild("Head")
+            local tHum = tChar:FindFirstChild("Humanoid")
+            
+            if tHead and tHum and tHum.Health > 0 then
+                local headOffset = (tHum.RigType == Enum.HumanoidRigType.R15) and 0.5 or 0.3
+                
+                -- Teleport Math based on mode
+                if positionMode == "Front" then
+                    -- Slightly above, little forward, 180 rotated
+                    root.CFrame = tHead.CFrame * CFrame.new(0, headOffset, -1.2) * CFrame.Angles(0, math.pi, 0)
+                else
+                    -- Behind, no 180 rotation, exact head level
+                    root.CFrame = tHead.CFrame * CFrame.new(0, 0, 1.2)
+                end
+                
+                -- Kill velocity to stop flinging
+                root.AssemblyLinearVelocity = Vector3.zero
+                root.AssemblyAngularVelocity = Vector3.zero
+            end
+        end
+    end
+end))
+
+-- ==========================================
+-- CLEAN KILL SYSTEM
+-- ==========================================
+killBtn.MouseButton1Click:Connect(function()
+    running = false
+    toggleEmote(false)
+    
+    -- Restore Collisions
+    if char then
+        for _, part in ipairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then part.CanCollide = true end
+        end
+    end
+    
+    -- Disconnect all events
+    for _, connection in ipairs(connections) do
+        if connection then connection:Disconnect() end
+    end
+    
+    gui:Destroy()
+end)
