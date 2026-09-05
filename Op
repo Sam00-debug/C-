@@ -141,7 +141,7 @@ closeBtn.Text = "-"
 closeBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
 closeBtn.Font = Enum.Font.GothamBold
 closeBtn.TextSize = 20
-closeBtn.ZIndex = 99
+
 
 local destroyBtn = Instance.new("TextButton", header)
 destroyBtn.Size = UDim2.new(0, 30, 0, 30)
@@ -151,7 +151,7 @@ destroyBtn.Text = "X"
 destroyBtn.TextColor3 = Color3.fromRGB(255, 80, 80)
 destroyBtn.Font = Enum.Font.GothamBold
 destroyBtn.TextSize = 16
-destroyBtn.ZIndex = 99
+
 
 -- Open Button 
 local openBtn = createFrame(gui, UDim2.fromOffset(45, 45), UDim2.fromScale(0.1, 0.5), Color3.fromRGB(30, 30, 35), 25)
