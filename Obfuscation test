@@ -141,13 +141,11 @@ return {
     {"prop🎁", "https://raw.githubusercontent.com/Sam00-debug/C-/refs/heads/main/pattern"},
     {"music🎵", "https://raw.githubusercontent.com/Sam00-debug/Perugius-hub-v1/refs/heads/main/Falcon"},
     {"premium💎", "https://raw.githubusercontent.com/Sam00-debug/C-/refs/heads/main/Received%20item"},
-    {"protection🛡️", "https://raw.githubusercontent.com/Sam00-debug/C-/refs/heads/main/Noclip%20shield"},
 
     {"avatars👤", "https://raw.githubusercontent.com/Sam00-debug/C-/refs/heads/main/fetch"},
     {"Emotes🕺🏻", "https://raw.githubusercontent.com/Sam00-debug/C-/refs/heads/main/Cat%20api"},
     {"secret places🗺️", "https://raw.githubusercontent.com/Sam00-debug/C-/refs/heads/main/Tp"},
-    {"antibang🛡️", "https://raw.githubusercontent.com/Sam00-debug/C-/refs/heads/main/Root%20rotation"},
-    {"op bang💥", "https://raw.githubusercontent.com/Sam00-debug/C-/refs/heads/main/Op"},
+ {"op bang💥", "https://raw.githubusercontent.com/Sam00-debug/C-/refs/heads/main/Op"},
         {"spammer📢", "https://raw.githubusercontent.com/Sam00-debug/C-/refs/heads/main/Loop%20symbols"},
    {"Discord", "https://raw.githubusercontent.com/Sam00-debug/C-/refs/heads/main/Dc%20link"},
 }
