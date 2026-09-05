@@ -304,17 +304,17 @@ end)
 
 local antibangBtn = Instance.new("TextButton", body)
 antibangBtn.Size = UDim2.new(1, -30, 0, 40)
-antibangBtn.Position = UDim2.new(0, 15, 1, -170)
+antibangBtn.Position = UDim2.new(0, 15, 1, -140)
 antibangBtn.BackgroundColor3 = Color3.fromRGB(180, 100, 40)
 Instance.new("UICorner", antibangBtn).CornerRadius = UDim.new(0, 6)
-antibangBtn.Text = "ANTIBANG (House Clear)"
+antibangBtn.Text = "ANTIBANG (Brookhaven)"
 antibangBtn.TextColor3 = Color3.new(1, 1, 1)
 antibangBtn.Font = Enum.Font.GothamBold
 antibangBtn.TextSize = 14
 
 local startBtn = Instance.new("TextButton", body)
 startBtn.Size = UDim2.new(1, -30, 0, 45)
-startBtn.Position = UDim2.new(0, 15, 1, -120)
+startBtn.Position = UDim2.new(0, 15, 1, -90)
 startBtn.BackgroundColor3 = Color3.fromRGB(40, 150, 80)
 Instance.new("UICorner", startBtn).CornerRadius = UDim.new(0, 6)
 startBtn.Text = "START"
