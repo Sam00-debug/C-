@@ -427,17 +427,8 @@ local function buildPlayerList()
 end
 updateListBtn.MouseButton1Click:Connect(buildPlayerList)
 
--- If target leaves, 
-table.insert(state.connections, Players.PlayerRemoving:Connect(function(plr)
-    local idx = table.find(state.selectedTargets, plr)
-    if idx then
-        table.remove(state.selectedTargets, idx)
-        selectTargetsBtn.Text = "Select Targets (" .. #state.selectedTargets .. ")"
-    end
-end))
 
--- --- ANTIBANG LOGIC INTEGRATION ---
--- MANUAL COORDINATES DATABASE
+-- COORDINATES 
 local manualPositions = {
     -- Motels
     Vector3.new(288, 5, 209), Vector3.new(257, 5, 278), Vector3.new(288, 22, 209), Vector3.new(257, 22, 278),
@@ -446,9 +437,9 @@ local manualPositions = {
     Vector3.new(146, 35, 371), Vector3.new(-21, 35, 366), Vector3.new(-191, 35, -232), Vector3.new(-351, 35, -229),
     Vector3.new(-456, 35, -224), Vector3.new(-453, 35, -318), Vector3.new(-356, 35, -313), Vector3.new(-194, 35, -313),
     Vector3.new(-424, 68, -446), Vector3.new(-353, 68, -510), Vector3.new(-38, 10, 2240),
-    -- North / South Estates
+    
     Vector3.new(-66, 84, -411), Vector3.new(190, 51, 569),
-    -- Apartments
+
     Vector3.new(-7, 20, -143), Vector3.new(-7, 36, -143)
 }
 
@@ -463,7 +454,7 @@ local function getPlayerHouse()
 end
 
 local function getClosestManualPosition(houseFolder)
-    -- Finds any loaded part in your house to identify which lot you are at
+    -- loaded part in your house to identify which lot you are at
     local samplePart = houseFolder:FindFirstChildWhichIsA("BasePart", true)
     if not samplePart then return nil end
     
