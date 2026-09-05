@@ -181,10 +181,11 @@ targetBackBtn.Size = UDim2.new(0, 60, 0, 25)
 targetBackBtn.Position = UDim2.new(1, -65, 0, 5)
 targetBackBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
 Instance.new("UICorner", targetBackBtn).CornerRadius = UDim.new(0, 4)
-targetBackBtn.Text = "Done"
+targetBackBtn.Text = "back"
 targetBackBtn.TextColor3 = Color3.new(1, 1, 1)
 targetBackBtn.Font = Enum.Font.GothamBold
 targetBackBtn.TextSize = 12
+targetBackBtn.ZIndex = 99
 
 local updateListBtn = Instance.new("TextButton", targetFrame)
 updateListBtn.Size = UDim2.new(1, -20, 0, 30)
@@ -384,12 +385,12 @@ local function buildPlayerList()
             
             local uName = Instance.new("TextLabel", btnContainer)
             uName.Size = UDim2.new(1, -10, 0.5, 0)
-            uName.Position = UDim2.new(0, 10, 0.6, 0)
+            uName.Position = UDim2.new(0, 10, 0.5, 0)
             uName.BackgroundTransparency = 1
             uName.Text = "@" .. plr.Name
-            uName.TextColor3 = Color3.fromRGB(1,1,1)
+            uName.TextColor3 = Color3.new(1, 1, 1)
             uName.Font = Enum.Font.Gotham
-            uName.TextSize = 12
+            uName.TextSize = 13
             uName.TextXAlignment = Enum.TextXAlignment.Left
             uName.ZIndex = 12
             
