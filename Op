@@ -502,7 +502,7 @@ table.insert(state.connections, RunService.Heartbeat:Connect(function()
                 root.CFrame = tHead.CFrame * CFrame.new(0, 0.4, -1.2) * CFrame.Angles(0, math.pi, 0)
             else
                 -- Back of the target, no 180 rotation
-                root.CFrame = tRoot.CFrame * CFrame.new(0, 0, 1.5)
+                root.CFrame = tRoot.CFrame * CFrame.new(0, 0, 1.2)
             end
             
             root.AssemblyLinearVelocity = Vector3.zero
