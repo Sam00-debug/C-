@@ -384,7 +384,8 @@ local function populatePlayers()
         end
     end
     playerList.CanvasSize = UDim2.new(0, 0, 0, ySize)
-endend
+end
+
 
 -- Button Bindings
 selectTargetsBtn.MouseButton1Click:Connect(function()
