@@ -556,6 +556,8 @@ bedToggleBtn.MouseButton1Click:Connect(function()
     clearProps(); spawnProp("FurnitureBleachers", "Furniture")
 end)
 
+
+
 -- RGB Controls
 local rgbLabel = Instance.new("TextLabel", mainList)
 rgbLabel.Size = UDim2.new(1, 0, 0, 12)
@@ -950,38 +952,34 @@ RunService.Heartbeat:Connect(function()
         end
 
     elseif activeMode == "Robot" then
-        if (now - lastRobotTick) >= ROBOT_RATE then
-            lastRobotTick = now
-            robotSwitchToggle = not robotSwitchToggle
+    if (now - lastRobotTick) >= ROBOT_RATE then
+        lastRobotTick = now
+        robotSwitchToggle = not robotSwitchToggle
+        
+        for tIdx, plr in ipairs(targetList) do
+            local tRoot = plr.Character.HumanoidRootPart
             
-            for tIdx, plr in ipairs(targetList) do
-                local tRoot = plr.Character.HumanoidRootPart
-                
-                -- Velocity offset prediction (+15 studs ahead math based on speed)
-                local velocity = tRoot.AssemblyLinearVelocity
-                local predictedCF = tRoot.CFrame + (velocity * PREDICTION_FACTOR)
-                
-                local propsPerTarget = math.floor(#propsData / tCount)
-                if propsPerTarget == 0 then propsPerTarget = 1 end
-                local startIdx = ((tIdx - 1) * propsPerTarget) + 1
-                local endIdx = (tIdx == tCount) and #propsData or (tIdx * propsPerTarget)
-                
-                local localIdx = 1
-                for i = startIdx, endIdx do
-                    local item = propsData[i]
-                    if item then
+            local velocity = tRoot.AssemblyLinearVelocity
+            local predictedCF = tRoot.CFrame + (velocity * PREDICTION_FACTOR)
+            
+            local propsPerTarget = math.floor(#propsData / tCount)
+            if propsPerTarget == 0 then propsPerTarget = 1 end
+            local startIdx = ((tIdx - 1) * propsPerTarget) + 1
+            local endIdx = (tIdx == tCount) and #propsData or (tIdx * propsPerTarget)
+            
+            local localIdx = 1
+            for i = startIdx, endIdx do
+                local item = propsData[i]
+                if item then
+                    -- SKIP locked prop
+                    local isLocked = (item.prop.HumanoidRootPart.Position - LOCKED_PROP_POSITION).Magnitude < 10
+                    if not isLocked then
                         local finalCFrame
                         
-                        -- Target logic based on amount selected
                         if tCount < 6 then
-                            -- Fibonacci Spherical Distribution 
                             local phi = math.acos(1 - 2 * (localIdx / propsPerTarget))
                             local theta = math.pi * (1 + math.sqrt(5)) * localIdx
-                            
-                            -- Half at 2x speed, half at 1x
                             local speedMult = (localIdx % 2 == 0) and 2 or 1
-                            
-                            -- Forward / Backward pulsing oscillation
                             local oscillation = math.sin(now * 100 * speedMult) * 2
                             local radius = 2 + oscillation
                             
@@ -990,73 +988,63 @@ RunService.Heartbeat:Connect(function()
                             local z = radius * math.cos(phi)
                             
                             local pos = predictedCF.Position + Vector3.new(x, y, z)
-                            
-                            -- Focus on target root part, flipping 180 degrees to look at the player correctly
                             finalCFrame = CFrame.lookAt(pos, predictedCF.Position) * CFrame.Angles(0, math.pi, 0)
                         else
-                            -- Traditional distributed robot logic
                             local offsetCFrame = getRobotOffset(localIdx, robotSwitchToggle)
                             finalCFrame = predictedCF * offsetCFrame
                         end
                         
                         task.spawn(function() pcall(function() item.remote:InvokeServer(finalCFrame) end) end)
-                        
                         localIdx = localIdx + 1
                     end
                 end
             end
         end
+    end
 
     elseif activeMode == "Chair" then
-        for _, plr in ipairs(targetList) do
-            local char = plr.Character
-            if char and char:FindFirstChild("HumanoidRootPart") and char:FindFirstChild("Humanoid") then
-                local tRoot = char.HumanoidRootPart
-                local humanoid = char.Humanoid
-                
-                -- Check if target is already successfully voided
-                if tRoot.Position.Y < -500 then
-                    voidedPlayers[plr] = true
-                else
-                    voidedPlayers[plr] = false
-                end
-                
-                -- Ensure exactly ONE prop is assigned per target
-                local myItem = assignedItems[plr]
-                if not myItem or not myItem.prop.Parent then
-                    for _, rItem in ipairs(propsData) do
-                        if not isItemAssigned(rItem) then
-                            myItem = rItem
-                            assignedItems[plr] = rItem
-                            break
-                        end
+    for _, plr in ipairs(targetList) do
+        local char = plr.Character
+        if char and char:FindFirstChild("HumanoidRootPart") and char:FindFirstChild("Humanoid") then
+            local tRoot = char.HumanoidRootPart
+            local humanoid = char.Humanoid
+            
+            if tRoot.Position.Y < -500 then
+                voidedPlayers[plr] = true
+            else
+                voidedPlayers[plr] = false
+            end
+            
+            local myItem = assignedItems[plr]
+            if not myItem or not myItem.prop.Parent then
+                for _, rItem in ipairs(propsData) do
+                    -- SKIP locked prop
+                    local isLocked = (rItem.prop.HumanoidRootPart.Position - LOCKED_PROP_POSITION).Magnitude < 10
+                    if not isItemAssigned(rItem) and not isLocked then
+                        myItem = rItem
+                        assignedItems[plr] = rItem
+                        break
                     end
                 end
-                
-                if myItem then
-                    -- If condition is false (they are not voided yet), execute the loop process
-                    if not voidedPlayers[plr] then
-                        task.spawn(function()
-                            pcall(function()
-                                if humanoid.Sit then
-                                    -- Target is sitting! Teleport the prop into the void to drag them down
-                                    myItem.remote:InvokeServer(CFrame.new(tRoot.Position.X, -1000, tRoot.Position.Z))
-                                else
-                                    -- Target is not sitting yet, keep teleporting the prop to their legs
-                                    -- Offset ~2.5 studs down from HumanoidRootPart to target the legs universally (R6 & R15)
-                                    local legCF = tRoot.CFrame * CFrame.new(0, -2.5, 0)
-                                    myItem.remote:InvokeServer(legCF)
-                                end
-                            end)
+            end
+            
+            if myItem then
+                if not voidedPlayers[plr] then
+                    task.spawn(function()
+                        pcall(function()
+                            if humanoid.Sit then
+                                myItem.remote:InvokeServer(CFrame.new(tRoot.Position.X, -1000, tRoot.Position.Z))
+                            else
+                                local legCF = tRoot.CFrame * CFrame.new(0, -2.5, 0)
+                                myItem.remote:InvokeServer(legCF)
+                            end
                         end)
-                    end
-                    -- If voidedPlayers[plr] is true, the script does nothing with the prop (stopping it) 
-                    -- until the target resets or moves back above Y = -500.
+                    end)
                 end
             end
         end
     end
-end)
+end
 
 -- --- RGB GLOW COROUTINE ---
 task.spawn(function()
@@ -1095,25 +1083,33 @@ task.spawn(function()
     end
 end)
 
+
 -- --- AUTO DUPLICATE (BACKGROUND) ---
-local hasAutoDuplicated = false
 task.spawn(function()
     while true do
-        if activeMode == "None" then
+        if activeMode == "Robot" or activeMode == "Chair" then
             updatePropsCache()
-            if #propsCache == 0 then hasAutoDuplicated = false 
-            elseif #propsCache == 2 and not hasAutoDuplicated then
-                hasAutoDuplicated = true
-                local duplicateRemote = propsCache[2]:FindFirstChild("DuplicateProp")
-                if duplicateRemote and duplicateRemote:IsA("RemoteFunction") then
-                    for i = 1, 13 do
-                        task.spawn(function() pcall(function() duplicateRemote:InvokeServer() end) end)
-                        task.wait(0.05)
+            
+            -- Find prop at locked position
+            local lockedProp = nil
+            for _, prop in ipairs(propsCache) do
+                if prop:FindFirstChild("HumanoidRootPart") then
+                    local pos = prop:FindFirstChild("HumanoidRootPart").Position
+                    if (pos - LOCKED_PROP_POSITION).Magnitude < 10 then
+                        lockedProp = prop
+                        break
                     end
-                    sendNotif("System", "Auto-Duplicating props for execution...", 4)
+                end
+            end
+            
+            -- Continuously duplicate from locked prop
+            if lockedProp then
+                local duplicateRemote = lockedProp:FindFirstChild("DuplicateProp")
+                if duplicateRemote and duplicateRemote:IsA("RemoteFunction") then
+                    task.spawn(function() pcall(function() duplicateRemote:InvokeServer() end) end)
                 end
             end
         end
-        task.wait(1)
+        task.wait(0.1) -- Duplication rate
     end
 end)
