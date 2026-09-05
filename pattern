@@ -672,10 +672,10 @@ manualDupBtn.MouseButton1Click:Connect(function()
     updatePropsCache()
     if #propsCache >= 1 then
         local targetProp = propsCache[1]
-        if #propsCache >= 2 then targetProp = propsCache[2] end
+        if #propsCache >= 1 then targetProp = propsCache[1] end
         local duplicateRemote = targetProp:FindFirstChild("DuplicateProp")
         if duplicateRemote and duplicateRemote:IsA("RemoteFunction") then
-            for i = 1, 13 do
+            for i = 1, 14 do
                 task.spawn(function() pcall(function() duplicateRemote:InvokeServer() end) end)
                 task.wait(0.05)
             end
@@ -872,7 +872,7 @@ task.spawn(function()
                 lastAutoDuplicate = tick()
 
                 --duplication function 
-for i = 1, 13 do
+for i = 1, 14 do
 task.spawn(function() pcall(function() duplicateRemote:InvokeServer() end) end)
 task.wait(0.05)
 end
