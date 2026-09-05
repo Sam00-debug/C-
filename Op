@@ -114,7 +114,7 @@ local function createFrame(parent, size, pos, color, radius)
 end
 
 --  Window (Increased height to fit new button)
-local mainFrame = createFrame(gui, UDim2.fromOffset(300, 415), UDim2.fromScale(0.5, 0.5), Color3.fromRGB(20, 20, 24), 8)
+local mainFrame = createFrame(gui, UDim2.fromOffset(300, 350), UDim2.fromScale(0.5, 0.5), Color3.fromRGB(20, 20, 24), 8)
 mainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 local mainStroke = Instance.new("UIStroke", mainFrame)
 mainStroke.Color = Color3.fromRGB(60, 60, 70)
@@ -302,10 +302,9 @@ createSlider(body, "Switch Interval (s)", 165, 0.05, 1, 0.5, true, function(val)
     state.switchInterval = val
 end)
 
--- --- NEW ANTIBANG BUTTON ---
 local antibangBtn = Instance.new("TextButton", body)
 antibangBtn.Size = UDim2.new(1, -30, 0, 40)
-antibangBtn.Position = UDim2.new(0, 15, 1, -110)
+antibangBtn.Position = UDim2.new(0, 15, 1, -170)
 antibangBtn.BackgroundColor3 = Color3.fromRGB(180, 100, 40)
 Instance.new("UICorner", antibangBtn).CornerRadius = UDim.new(0, 6)
 antibangBtn.Text = "ANTIBANG (House Clear)"
@@ -315,7 +314,7 @@ antibangBtn.TextSize = 14
 
 local startBtn = Instance.new("TextButton", body)
 startBtn.Size = UDim2.new(1, -30, 0, 45)
-startBtn.Position = UDim2.new(0, 15, 1, -60)
+startBtn.Position = UDim2.new(0, 15, 1, -120)
 startBtn.BackgroundColor3 = Color3.fromRGB(40, 150, 80)
 Instance.new("UICorner", startBtn).CornerRadius = UDim.new(0, 6)
 startBtn.Text = "START"
