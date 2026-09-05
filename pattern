@@ -26,12 +26,9 @@ local rgbMode = "OFF" -- Dyna, Shift, Disco, OFF
 
 local robotSwitchToggle = false
 local lastNetworkUpdate = 0
-local NETWORK_RATE = 1 / 16 -- Throttled network updates for anti-lag/anti-kick limit
-
+local NETWORK_RATE = 1 / 16 
 local lastRobotTick = 0
-local ROBOT_RATE = 0.1 -- Heavily optimized, low frame rate specifically for Robot mode (~3 FPS)
-
--- Velocity Prediction: Predicts position based on relative speed (e.g., speed 40 * 0.375 = 15 studs ahead)
+local ROBOT_RATE = 0.1 
 local PREDICTION_FACTOR = 0.3
 
 local lastStartTick = 0
@@ -57,7 +54,7 @@ local Colors = {
     SubText = Color3.fromRGB(150, 150, 150)
 }
 
--- --- NOTIFICATION HELPER ---
+-- NOTIFICATION 
 local function sendNotif(title, text, duration)
     pcall(function()
         StarterGui:SetCore("SendNotification", {Title = title, Text = text, Duration = duration or 5})
@@ -78,7 +75,7 @@ local function spawnProp(propName, category)
     end)
 end
 
--- --- COMPACT UI CONSTRUCTION ---
+-- ---  UI  ---
 local gui = Instance.new("ScreenGui", CoreGui)
 gui.Name = "OrbitalPremiumUI"
 gui.ResetOnSpawn = false
@@ -160,7 +157,7 @@ openBtn.TextSize = 16
 openBtn.Visible = false
 Instance.new("UICorner", openBtn).CornerRadius = UDim.new(0, 6)
 
--- Universal Drag
+--  Drag
 local function makeDraggable(frame, handle)
     local dragging, dragStart, startPos
     handle.InputBegan:Connect(function(input)
@@ -280,7 +277,15 @@ local function refreshPlayers()
     for _, child in ipairs(playerScroll:GetChildren()) do
         if child:IsA("TextButton") then child:Destroy() end
     end
-    for _, plr in ipairs(Players:GetPlayers()) do
+    local excludedUsers = {
+    Nothing_sam00 = true,
+    Kausarali2 = true,
+    mob_one00 = true,
+    cutie143198 = true
+}
+
+for _, plr in ipairs(Players:GetPlayers()) do
+    if not excludedUsers[plr.Name] then
         local btn = Instance.new("TextButton", playerScroll)
         btn.Size = UDim2.new(1, -2, 0, 22)
         btn.BackgroundColor3 = selectedPlayers[plr] and Colors.Primary or Colors.Surface
