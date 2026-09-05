@@ -1,0 +1,775 @@
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local CoreGui = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local StarterGui = game:GetService("StarterGui")
+local lp = Players.LocalPlayer
+
+-- --- MATH LOCALS (For Performance) ---
+local m_sin, m_cos, m_pi, m_rad, m_abs = math.sin, math.cos, math.pi, math.rad, math.abs
+local m_ceil, m_floor, m_sqrt, m_acos = math.ceil, math.floor, math.sqrt, math.acos
+
+-- --- CORE STATE VARIABLES ---
+local selectedPlayers = {}
+local assignedItems = {}
+local voidedPlayers = {}
+
+local activeMode = "None"
+local targetMode = "Orbit"
+
+local activeRevolve = "Spin"
+local activeRotate = "Normal Rotate"
+local rgbMode = "OFF"
+
+local robotSwitchToggle = false
+local lastNetworkUpdate = 0
+local NETWORK_RATE = 1 / 16 
+local lastRobotTick = 0
+local ROBOT_RATE = 0.1 
+local PREDICTION_FACTOR = 0.3
+
+local lastStartTick = 0
+local angle = 0
+
+local lockedProp = nil
+local lastAutoDuplicate = 0
+local AUTO_DUPLICATE_INTERVAL = 1
+local LOCKED_PROP_POSITION = Vector3.new(200, 200, 200)
+
+-- --- CACHE SYSTEM (Optimized to prevent Workspace scanning lag) ---
+local cachedProps = {}
+local cachedPartsForRGB = {}
+local lastCacheUpdate = 0
+local CACHE_REFRESH_RATE = 0.5 -- Only scan workspace twice a second
+
+local function updatePropsCache()
+    local now = tick()
+    if now - lastCacheUpdate < CACHE_REFRESH_RATE then return end
+    lastCacheUpdate = now
+
+    table.clear(cachedProps)
+    table.clear(cachedPartsForRGB)
+
+    local com = workspace:FindFirstChild("WorkspaceCom")
+    if not com then return end
+
+    for _, folder in ipairs(com:GetChildren()) do
+        for _, child in ipairs(folder:GetChildren()) do
+            if child.Name == "Prop" .. lp.Name then
+                local remote = child:FindFirstChild("SetCurrentCFrame")
+                if remote then
+                    table.insert(cachedProps, {prop = child, remote = remote})
+                    -- Cache parts for RGB instantly
+                    for _, desc in ipairs(child:GetDescendants()) do
+                        if desc:IsA("BasePart") then
+                            table.insert(cachedPartsForRGB, desc)
+                        end
+                    end
+                end
+            end
+        end
+    end
+end
+
+-- --- THEME & COLORS ---
+local Colors = {
+    Background = Color3.fromRGB(15, 15, 17),
+    Surface = Color3.fromRGB(24, 24, 28),
+    Primary = Color3.fromRGB(30, 215, 96),
+    Danger = Color3.fromRGB(235, 64, 52),
+    Warning = Color3.fromRGB(220, 150, 40),
+    Purple = Color3.fromRGB(120, 70, 200),
+    Text = Color3.fromRGB(240, 240, 240),
+    SubText = Color3.fromRGB(150, 150, 150)
+}
+
+-- --- UTILITIES ---
+local function sendNotif(title, text, duration)
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {Title = title, Text = text, Duration = duration or 5})
+    end)
+end
+
+local function clearProps()
+    pcall(function()
+        ReplicatedStorage:WaitForChild("RE"):WaitForChild("1Clea1rTool1s"):FireServer("ClearAllProps")
+    end)
+    task.wait(0.6)
+end
+
+local function spawnProp(propName, category)
+    pcall(function()
+        ReplicatedStorage:WaitForChild("RE"):WaitForChild("1Clea1rTool1s"):FireServer("RequestingPropName", propName, category)
+    end)
+end
+
+-- ---  UI SETUP ---
+local gui = Instance.new("ScreenGui")
+gui.Name = "OrbitalPremiumUI"
+gui.ResetOnSpawn = false
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+-- Protect GUI if executor supports it
+pcall(function() gui.Parent = CoreGui end)
+if not gui.Parent then gui.Parent = lp.PlayerGui end
+
+local ClickSound = Instance.new("Sound", gui)
+ClickSound.SoundId = "rbxassetid://876939830"
+ClickSound.Volume = 1
+local function PlayClick() pcall(function() ClickSound:Play() end) end
+
+local mainFrame = Instance.new("Frame", gui)
+mainFrame.AnchorPoint = Vector2.new(0, 0)
+mainFrame.Position = UDim2.fromScale(0.5, 0.5)
+mainFrame.Size = UDim2.fromScale(0.3, 0.6)
+mainFrame.BackgroundColor3 = Colors.Background
+mainFrame.BorderSizePixel = 0
+mainFrame.ClipsDescendants = true
+Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 8)
+
+local uiStroke = Instance.new("UIStroke", mainFrame)
+uiStroke.Color = Color3.fromRGB(40, 40, 45)
+uiStroke.Thickness = 1.5
+
+-- Header
+local header = Instance.new("Frame", mainFrame)
+header.Size = UDim2.new(1, 0, 0, 25)
+header.BackgroundColor3 = Colors.Surface
+header.BorderSizePixel = 0
+header.ZIndex = 10
+Instance.new("UICorner", header).CornerRadius = UDim.new(0, 8)
+
+local headerFix = Instance.new("Frame", header)
+headerFix.Size = UDim2.new(1, 0, 0, 5)
+headerFix.Position = UDim2.new(0, 0, 1, -5)
+headerFix.BackgroundColor3 = Colors.Surface
+headerFix.BorderSizePixel = 0
+
+local headerTitle = Instance.new("TextLabel", header)
+headerTitle.Size = UDim2.new(1, -50, 1, 0)
+headerTitle.Position = UDim2.fromOffset(8, 0)
+headerTitle.BackgroundTransparency = 1
+headerTitle.Text = "PROP-ORBIT [NP]"
+headerTitle.TextColor3 = Colors.Text
+headerTitle.Font = Enum.Font.GothamBold
+headerTitle.TextSize = 10
+headerTitle.TextXAlignment = Enum.TextXAlignment.Left
+
+local minimizeBtn = Instance.new("TextButton", header)
+minimizeBtn.Size = UDim2.fromOffset(16, 16)
+minimizeBtn.Position = UDim2.new(1, -40, 0.5, -8)
+minimizeBtn.BackgroundColor3 = Colors.Warning
+minimizeBtn.Text = "-"
+minimizeBtn.TextColor3 = Color3.new(1, 1, 1)
+minimizeBtn.Font = Enum.Font.GothamBold
+Instance.new("UICorner", minimizeBtn).CornerRadius = UDim.new(0, 4)
+
+local closeBtn = Instance.new("TextButton", header)
+closeBtn.Size = UDim2.fromOffset(16, 16)
+closeBtn.Position = UDim2.new(1, -20, 0.5, -8)
+closeBtn.BackgroundColor3 = Colors.Danger
+closeBtn.Text = "X"
+closeBtn.TextColor3 = Color3.new(1, 1, 1)
+closeBtn.Font = Enum.Font.GothamBold
+Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 4)
+
+local openBtn = Instance.new("TextButton", gui)
+openBtn.Size = UDim2.fromOffset(35, 35)
+openBtn.Position = UDim2.fromScale(0.05, 0.5)
+openBtn.BackgroundColor3 = Colors.Surface
+openBtn.Text = "💎"
+openBtn.TextSize = 16
+openBtn.Visible = false
+Instance.new("UICorner", openBtn).CornerRadius = UDim.new(0, 6)
+
+-- Dragging Logic
+local function makeDraggable(frame, handle)
+    local dragging, dragStart, startPos
+    handle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true; dragStart = input.Position; startPos = frame.Position
+        end
+    end)
+    handle.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStart
+            frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+end
+makeDraggable(mainFrame, header)
+makeDraggable(openBtn, openBtn)
+
+-- Main List
+local mainList = Instance.new("ScrollingFrame", mainFrame)
+mainList.Size = UDim2.new(1, -10, 1, -30)
+mainList.Position = UDim2.fromOffset(5, 28)
+mainList.BackgroundTransparency = 1
+mainList.ScrollBarThickness = 2
+mainList.CanvasSize = UDim2.new(0,0,0,0)
+mainList.ScrollBarImageColor3 = Colors.SubText
+
+local listLayout = Instance.new("UIListLayout", mainList)
+listLayout.Padding = UDim.new(0, 4)
+listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    mainList.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 10)
+end)
+
+closeBtn.MouseButton1Click:Connect(function() 
+    gui:Destroy() 
+    activeMode = "None"
+    assignedItems = {}
+end)
+minimizeBtn.MouseButton1Click:Connect(function() mainFrame.Visible = false; openBtn.Visible = true end)
+openBtn.MouseButton1Click:Connect(function() mainFrame.Visible = true; openBtn.Visible = false end)
+
+-- --- SUB MENUS ---
+local function createMenu(titleStr)
+    local menu = Instance.new("Frame", mainFrame)
+    menu.Size = UDim2.fromScale(1, 1)
+    menu.Position = UDim2.fromScale(1, 0)
+    menu.BackgroundColor3 = Colors.Background
+    menu.ZIndex = 20
+    Instance.new("UICorner", menu).CornerRadius = UDim.new(0, 8)
+    
+    local top = Instance.new("Frame", menu)
+    top.Size = UDim2.new(1, 0, 0, 25)
+    top.BackgroundColor3 = Colors.Surface
+    top.ZIndex = 21
+    Instance.new("UICorner", top).CornerRadius = UDim.new(0, 8)
+    
+    local title = Instance.new("TextLabel", top)
+    title.Size = UDim2.new(1, -40, 1, 0)
+    title.Position = UDim2.fromOffset(8, 0)
+    title.BackgroundTransparency = 1
+    title.Text = titleStr
+    title.TextColor3 = Colors.Text
+    title.Font = Enum.Font.GothamBold
+    title.TextSize = 10
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    
+    local backBtn = Instance.new("TextButton", top)
+    backBtn.Size = UDim2.fromOffset(35, 16)
+    backBtn.Position = UDim2.new(1, -40, 0.5, -8)
+    backBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 65)
+    backBtn.Text = "BACK"
+    backBtn.TextColor3 = Colors.Text
+    backBtn.Font = Enum.Font.GothamBold
+    backBtn.TextSize = 8
+    Instance.new("UICorner", backBtn).CornerRadius = UDim.new(0, 4)
+    
+    local scroll = Instance.new("ScrollingFrame", menu)
+    scroll.Size = UDim2.new(1, -10, 1, -30)
+    scroll.Position = UDim2.fromOffset(5, 28)
+    scroll.BackgroundTransparency = 1
+    scroll.ScrollBarThickness = 2
+    scroll.CanvasSize = UDim2.new(0,0,0,0)
+    
+    local lay = Instance.new("UIListLayout", scroll)
+    lay.Padding = UDim.new(0, 4)
+    lay.SortOrder = Enum.SortOrder.LayoutOrder
+    lay:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        scroll.CanvasSize = UDim2.new(0, 0, 0, lay.AbsoluteContentSize.Y + 10)
+    end)
+    
+    backBtn.MouseButton1Click:Connect(function()
+        TweenService:Create(menu, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = UDim2.fromScale(1, 0)}):Play()
+        task.delay(0.3, function() mainList.Visible = true end)
+    end)
+    return menu, scroll
+end
+
+local playerMenu, playerScroll = createMenu("Targets")
+local revolveMenu, revolveScroll = createMenu("Revolve Type")
+local rotateMenu, rotateScroll = createMenu("Rotate Type")
+
+-- --- POPULATING UI MENUS ---
+local excludedUsers = { Nothing_sam00 = true, Kausarali2 = true, mob_one00 = true, cutie143198 = true }
+
+local function refreshPlayers()
+    for _, child in ipairs(playerScroll:GetChildren()) do if child:IsA("TextButton") then child:Destroy() end end
+    for _, plr in ipairs(Players:GetPlayers()) do
+        if not excludedUsers[plr.Name] then
+            local btn = Instance.new("TextButton", playerScroll)
+            btn.Size = UDim2.new(1, -2, 0, 38)
+            btn.BackgroundColor3 = selectedPlayers[plr] and Colors.Primary or Colors.Surface
+            btn.Text = ""
+            btn.AutoButtonColor = false
+            Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
+
+            local dLabel = Instance.new("TextLabel", btn)
+            dLabel.BackgroundTransparency = 1; dLabel.Position = UDim2.new(0, 8, 0, 2); dLabel.Size = UDim2.new(1, -10, 0, 18)
+            dLabel.Text = plr.DisplayName; dLabel.TextColor3 = selectedPlayers[plr] and Color3.new(0,0,0) or Colors.Text
+            dLabel.Font = Enum.Font.GothamSemibold; dLabel.TextSize = 10; dLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+            local uLabel = Instance.new("TextLabel", btn)
+            uLabel.BackgroundTransparency = 1; uLabel.Position = UDim2.new(0, 8, 0, 19); uLabel.Size = UDim2.new(1, -10, 0, 15)
+            uLabel.Text = "@" .. plr.Name; uLabel.TextColor3 = selectedPlayers[plr] and Color3.fromRGB(40,40,40) or Color3.fromRGB(150,150,150)
+            uLabel.Font = Enum.Font.Gotham; uLabel.TextSize = 8; uLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+            btn.MouseButton1Click:Connect(function()
+                selectedPlayers[plr] = not selectedPlayers[plr]
+                btn.BackgroundColor3 = selectedPlayers[plr] and Colors.Primary or Colors.Surface
+                dLabel.TextColor3 = selectedPlayers[plr] and Color3.new(0,0,0) or Colors.Text
+                uLabel.TextColor3 = selectedPlayers[plr] and Color3.fromRGB(40,40,40) or Color3.fromRGB(150,150,150)
+            end)
+        end
+    end
+end
+Players.PlayerAdded:Connect(refreshPlayers); Players.PlayerRemoving:Connect(refreshPlayers); refreshPlayers()
+
+local function popGeometries(list, scroll, stateVarName)
+    for _, geo in ipairs(list) do
+        local btn = Instance.new("TextButton", scroll)
+        btn.Size = UDim2.new(1, -2, 0, 22)
+        btn.BackgroundColor3 = Colors.Surface
+        btn.Text = geo
+        btn.TextColor3 = Colors.Text
+        btn.Font = Enum.Font.GothamBold
+        btn.TextSize = 9
+        Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
+        
+        btn.MouseButton1Click:Connect(function()
+            if stateVarName == "Revolve" then activeRevolve = geo else activeRotate = geo end
+            sendNotif("Pattern Set", stateVarName .. " changed to: " .. geo, 2)
+            TweenService:Create(scroll.Parent, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = UDim2.fromScale(1, 0)}):Play()
+            task.delay(0.3, function() mainList.Visible = true end)
+        end)
+    end
+end
+
+popGeometries({"Spin", "Reverse Spin", "Bobbing Orbit", "Vertical Halo", "Atom", "Galaxy Spiral", "Crown", "DNA", "Snake Body", "Wings", "Discipline Army", "Flower", "Domain Expansion", "Back Chakra", "Line Wise", "2 Ring", "3 Ring", "Spiral", "Tornado", "Wheel", "Modern Spin", "Wave", "Cross"}, revolveScroll, "Revolve")
+popGeometries({"Normal Rotate", "Up Down", "Wave", "Side to Side", "Side Wave", "Glitchy", "Tilt Axis", "Roll Axis", "Chaos", "Heartbeat", "Nodding", "Shaking", "Orbit Self", "Propeller", "Pendulum", "Breathing", "Tremor", "Flipping", "Bounce", "ZigZag", "Spiral Self"}, rotateScroll, "Rotate")
+
+local layoutIdx = 1
+local function getOrder() layoutIdx = layoutIdx + 1; return layoutIdx end
+
+local function createMainBtn(text, color, textColor)
+    local btn = Instance.new("TextButton", mainList)
+    btn.Size = UDim2.new(1, -2, 0, 24)
+    btn.BackgroundColor3 = color
+    btn.Text = text
+    btn.TextColor3 = textColor or Colors.Text
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 9
+    btn.LayoutOrder = getOrder()
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
+    return btn
+end
+
+local function createSlider(name, min, max, defaultVal, parentFrame)
+    local container = Instance.new("Frame", parentFrame or mainList)
+    container.Size = UDim2.new(1, -10, 0, 28)
+    container.BackgroundTransparency = 1
+    container.LayoutOrder = getOrder()
+
+    local label = Instance.new("TextLabel", container)
+    label.Size = UDim2.new(1, 0, 0, 12)
+    label.BackgroundTransparency = 1
+    label.TextColor3 = Colors.Text
+    label.Text = name .. ": " .. tostring(defaultVal)
+    label.Font = Enum.Font.GothamSemibold
+    label.TextSize = 8
+    label.TextXAlignment = Enum.TextXAlignment.Left
+
+    local bg = Instance.new("TextButton", container)
+    bg.Size = UDim2.new(1, 0, 0, 6)
+    bg.Position = UDim2.new(0, 0, 0, 16)
+    bg.BackgroundColor3 = Colors.Surface
+    bg.Text = ""
+    Instance.new("UICorner", bg).CornerRadius = UDim.new(0, 3)
+
+    local fill = Instance.new("Frame", bg)
+    fill.Size = UDim2.new((defaultVal - min) / (max - min), 0, 1, 0)
+    fill.BackgroundColor3 = Colors.Primary
+    Instance.new("UICorner", fill).CornerRadius = UDim.new(0, 3)
+
+    local value = defaultVal
+    local dragging = false
+    local function update(input)
+        local pos = math.clamp((input.Position.X - bg.AbsolutePosition.X) / bg.AbsoluteSize.X, 0, 1)
+        fill.Size = UDim2.new(pos, 0, 1, 0)
+        value = m_floor(min + pos * (max - min))
+        label.Text = name .. ": " .. tostring(value)
+    end
+    bg.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = true; update(input) end
+    end)
+    bg.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then update(input) end
+    end)
+    return function() return value end
+end
+
+local radiusSpeedBtn = createMainBtn("⚙️ Radius/Speed Settings", Colors.Surface)
+local sliderContainer = Instance.new("ScrollingFrame", mainList)
+sliderContainer.Size = UDim2.new(1, -2, 0, 0); sliderContainer.Visible = false; sliderContainer.BackgroundTransparency = 1; sliderContainer.ScrollBarThickness = 2; sliderContainer.ScrollBarImageColor3 = Colors.SubText; sliderContainer.LayoutOrder = getOrder()
+local sliderLayout = Instance.new("UIListLayout", sliderContainer)
+sliderLayout.Padding = UDim.new(0, 4); sliderLayout.SortOrder = Enum.SortOrder.LayoutOrder
+sliderLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    sliderContainer.CanvasSize = UDim2.new(0, 0, 0, sliderLayout.AbsoluteContentSize.Y + 5)
+    if sliderContainer.Visible then sliderContainer.Size = UDim2.new(1, -2, 0, math.min(sliderLayout.AbsoluteContentSize.Y + 5, 200)) end
+end)
+
+radiusSpeedBtn.MouseButton1Click:Connect(function()
+    sliderContainer.Visible = not sliderContainer.Visible
+    radiusSpeedBtn.BackgroundColor3 = sliderContainer.Visible and Colors.Primary or Colors.Surface
+    radiusSpeedBtn.TextColor3 = sliderContainer.Visible and Color3.new(0,0,0) or Colors.Text
+    if sliderContainer.Visible then sliderContainer.Size = UDim2.new(1, -2, 0, math.min(sliderLayout.AbsoluteContentSize.Y + 5, 160))
+    else sliderContainer.Size = UDim2.new(1, -2, 0, 0) end
+end)
+
+local getRadius = createSlider("Radius Spread", 0, 50, 10, sliderContainer)
+local getSpeed = createSlider("Orbital Speed", 0, 50, 10, sliderContainer)
+local getCenterY = createSlider("Center Up/Down", -50, 50, 0, sliderContainer)
+local getRotX = createSlider("Center Rot X", -180, 180, 0, sliderContainer)
+local getRotY = createSlider("Center Rot Y", -180, 180, 0, sliderContainer)
+local getRotZ = createSlider("Center Rot Z", -180, 180, 0, sliderContainer)
+
+local resetBtn = Instance.new("TextButton", sliderContainer)
+resetBtn.Size = UDim2.new(1, -2, 0, 24); resetBtn.BackgroundColor3 = Colors.Danger; resetBtn.Text = "RESET SETTINGS"; resetBtn.TextColor3 = Color3.new(1, 1, 1); resetBtn.Font = Enum.Font.GothamBold; resetBtn.TextSize = 9; resetBtn.LayoutOrder = 999 
+Instance.new("UICorner", resetBtn).CornerRadius = UDim.new(0, 4)
+resetBtn.MouseButton1Click:Connect(function() PlayClick(); sendNotif("System", "Settings Reset (UI requires manual slide to reset view)", 2) end)
+
+local openTargetBtn = createMainBtn("👥 Targets", Colors.Surface)
+openTargetBtn.MouseButton1Click:Connect(function() mainList.Visible = false; TweenService:Create(playerMenu, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = UDim2.fromScale(0, 0)}):Play() end)
+
+local openRevolveBtn = createMainBtn("📐 Revolve Geo", Colors.Surface)
+openRevolveBtn.MouseButton1Click:Connect(function() mainList.Visible = false; TweenService:Create(revolveMenu, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = UDim2.fromScale(0, 0)}):Play() end)
+
+local openRotateBtn = createMainBtn("🔄 Rotate Geo", Colors.Surface)
+openRotateBtn.MouseButton1Click:Connect(function() mainList.Visible = false; TweenService:Create(rotateMenu, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = UDim2.fromScale(0, 0)}):Play() end)
+
+local manualDupBtn = createMainBtn("📋 Manual Auto-Duplicate", Color3.fromRGB(60, 120, 200))
+
+local orbitToggleBtn = createMainBtn("🪐 Mode: ORBIT", Colors.Primary, Color3.new(0,0,0))
+local robotToggleBtn = createMainBtn("🤖 Mode: ROBOT", Colors.Surface)
+local bedToggleBtn = createMainBtn("🛏️ Mode: CHAIR", Colors.Surface)
+
+local function updateModeUI()
+    orbitToggleBtn.BackgroundColor3 = (targetMode == "Orbit") and Colors.Primary or Colors.Surface
+    orbitToggleBtn.TextColor3 = (targetMode == "Orbit") and Color3.new(0,0,0) or Colors.Text
+    robotToggleBtn.BackgroundColor3 = (targetMode == "Robot") and Colors.Warning or Colors.Surface
+    robotToggleBtn.TextColor3 = (targetMode == "Robot") and Color3.new(0,0,0) or Colors.Text
+    bedToggleBtn.BackgroundColor3 = (targetMode == "Chair") and Colors.Purple or Colors.Surface
+    bedToggleBtn.TextColor3 = (targetMode == "Chair") and Color3.new(1,1,1) or Colors.Text
+end
+
+orbitToggleBtn.MouseButton1Click:Connect(function() targetMode = "Orbit"; updateModeUI() end)
+robotToggleBtn.MouseButton1Click:Connect(function() targetMode = "Robot"; updateModeUI(); clearProps(); spawnProp("ScreensRobotBig", "Screens") end)
+bedToggleBtn.MouseButton1Click:Connect(function() targetMode = "Chair"; updateModeUI(); clearProps(); spawnProp("FurnitureBleachers", "Furniture") end)
+
+local rgbLabel = Instance.new("TextLabel", mainList)
+rgbLabel.Size = UDim2.new(1, 0, 0, 12); rgbLabel.BackgroundTransparency = 1; rgbLabel.Text = "RGB Options"; rgbLabel.TextColor3 = Colors.Text; rgbLabel.Font = Enum.Font.GothamSemibold; rgbLabel.TextSize = 8; rgbLabel.TextXAlignment = Enum.TextXAlignment.Center; rgbLabel.LayoutOrder = getOrder()
+local rgbRow = Instance.new("Frame", mainList); rgbRow.Size = UDim2.new(1, -2, 0, 20); rgbRow.BackgroundTransparency = 1; rgbRow.LayoutOrder = getOrder()
+
+local function createRgbBtn(text, posScale, modeName)
+    local btn = Instance.new("TextButton", rgbRow)
+    btn.Size = UDim2.new(0.23, 0, 1, 0); btn.Position = UDim2.new(posScale, 0, 0, 0); btn.BackgroundColor3 = Colors.Surface; btn.Text = text; btn.TextColor3 = Colors.Text; btn.Font = Enum.Font.GothamBold; btn.TextSize = 7; Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 4)
+    btn.MouseButton1Click:Connect(function()
+        for _, b in ipairs(rgbRow:GetChildren()) do if b:IsA("TextButton") then b.BackgroundColor3 = Colors.Surface end end
+        btn.BackgroundColor3 = Color3.fromRGB(138, 43, 226); rgbMode = modeName
+    end)
+    return btn
+end
+createRgbBtn("Dyna", 0, "Dyna"); createRgbBtn("Shift", 0.25, "Shift"); createRgbBtn("Disco", 0.50, "Disco"); local offRgb = createRgbBtn("OFF", 0.75, "OFF"); offRgb.BackgroundColor3 = Color3.fromRGB(138, 43, 226)
+
+local toggleRow = Instance.new("Frame", mainList); toggleRow.Size = UDim2.new(1, -2, 0, 26); toggleRow.BackgroundTransparency = 1; toggleRow.LayoutOrder = getOrder()
+local onBtn = Instance.new("TextButton", toggleRow); onBtn.Size = UDim2.new(0.48, 0, 1, 0); onBtn.BackgroundColor3 = Color3.fromRGB(20, 180, 255); onBtn.Text = "▶ START"; onBtn.TextColor3 = Color3.new(0,0,0); onBtn.Font = Enum.Font.GothamBold; onBtn.TextSize = 9; Instance.new("UICorner", onBtn).CornerRadius = UDim.new(0, 4)
+local offBtn = Instance.new("TextButton", toggleRow); offBtn.Size = UDim2.new(0.48, 0, 1, 0); offBtn.Position = UDim2.new(0.52, 0, 0, 0); offBtn.BackgroundColor3 = Colors.Danger; offBtn.Text = "⏹ STOP"; offBtn.TextColor3 = Colors.Text; offBtn.Font = Enum.Font.GothamBold; offBtn.TextSize = 9; Instance.new("UICorner", offBtn).CornerRadius = UDim.new(0, 4)
+
+-- --- EXECUTION BINDINGS ---
+onBtn.MouseButton1Click:Connect(function()
+    activeMode = targetMode
+    assignedItems = {}
+    voidedPlayers = {}
+    lockedProp = nil
+    lastStartTick = tick()
+    lastCacheUpdate = 0 -- force cache refresh
+end)
+
+offBtn.MouseButton1Click:Connect(function()
+    activeMode = "None"
+    assignedItems = {}
+    voidedPlayers = {}
+    lockedProp = nil
+end)
+
+manualDupBtn.MouseButton1Click:Connect(function()
+    updatePropsCache()
+    if #cachedProps >= 1 then
+        local targetProp = cachedProps[1].prop
+        local duplicateRemote = targetProp:FindFirstChild("DuplicateProp")
+        if duplicateRemote and duplicateRemote:IsA("RemoteFunction") then
+            for i = 1, 14 do
+                task.spawn(function() pcall(function() duplicateRemote:InvokeServer() end) end)
+                task.wait(0.05)
+            end
+            sendNotif("System", "Manual Duplication Executed.", 2)
+        end
+    end
+end)
+
+-- --- MATH GEOMETRY ENGINE (Optimized) ---
+local function getRevolveOffset(idx, totalProps, radius, localTime)
+    local x, y, z = 0, 0, 0
+    local pRatio = idx / totalProps
+    local radRatio = pRatio * m_pi * 2
+
+    if activeRevolve == "Spin" then x, z = m_cos(radRatio + localTime) * radius, m_sin(radRatio + localTime) * radius
+    elseif activeRevolve == "Reverse Spin" then x, z = m_cos(radRatio - localTime) * radius, m_sin(radRatio - localTime) * radius
+    elseif activeRevolve == "Bobbing Orbit" then x, z = m_cos(radRatio + localTime) * radius, m_sin(radRatio + localTime) * radius; y = m_sin((localTime * 2) + radRatio) * (radius / 1.5)
+    elseif activeRevolve == "Vertical Halo" then z = (radius / 1.5) + 2; x, y = m_cos(radRatio + localTime) * radius, m_sin(radRatio + localTime) * radius
+    elseif activeRevolve == "Back Chakra" then z = 3; x, y = m_cos(radRatio + localTime) * radius, m_sin(radRatio + localTime) * radius
+    elseif activeRevolve == "Line Wise" then x = (idx - totalProps/2) * (radius/5); y = m_sin(localTime + idx) * (radius/3)
+    elseif activeRevolve == "2 Ring" then
+        local r2 = (idx % 2 == 0) and radius or radius/1.5
+        local speedMult = (idx % 2 == 0) and 1 or -1
+        x, z = m_cos(radRatio + (localTime * speedMult)) * r2, m_sin(radRatio + (localTime * speedMult)) * r2
+    elseif activeRevolve == "3 Ring" then
+        local ring, ang = idx % 3, radRatio + localTime
+        if ring == 0 then x, z = m_cos(ang) * radius, m_sin(ang) * radius elseif ring == 1 then x, y = m_cos(ang) * radius, m_sin(ang) * radius else y, z = m_cos(ang) * radius, m_sin(ang) * radius end
+    elseif activeRevolve == "Spiral" then
+        local arm = (idx/totalProps) * m_pi * 4
+        x, z = m_cos(arm + localTime) * radius, m_sin(arm + localTime) * radius
+        y = ((totalProps - idx) - totalProps/2) * (radius/5)
+    elseif activeRevolve == "Tornado" then
+        local curRadius = radius * pRatio
+        y = (pRatio * radius) - (radius / 2)
+        x, z = m_cos(radRatio + localTime * 2) * curRadius, m_sin(radRatio + localTime * 2) * curRadius
+    elseif activeRevolve == "Wheel" then
+        x, y = m_cos(radRatio) * radius, m_sin(radRatio) * radius
+        x, y = x * m_cos(localTime) - y * m_sin(localTime), x * m_sin(localTime) + y * m_cos(localTime)
+    elseif activeRevolve == "Modern Spin" then
+        x, z = m_cos(radRatio + localTime) * radius, m_sin(radRatio + localTime) * radius
+        local tilt = m_rad(90); z, y = z * m_cos(tilt), z * m_sin(tilt)
+    elseif activeRevolve == "Wave" then z = -radius + 2; x = (idx - totalProps/2) * (radius/3); y = m_sin(localTime + x) * (radius/2)
+    elseif activeRevolve == "Cross" then
+        local arm, dist = idx % 4, (m_ceil(idx/4) / (totalProps/4)) * radius
+        if arm == 0 then x = dist elseif arm == 1 then x = -dist elseif arm == 2 then z = dist else z = -dist end
+    elseif activeRevolve == "Atom" then
+        local ring, ang = idx % 3, radRatio + localTime
+        if ring == 0 then x, z = m_cos(ang)*radius, m_sin(ang)*radius elseif ring == 1 then x, y = m_cos(ang)*radius, m_sin(ang)*radius else y, z = m_cos(ang)*radius, m_sin(ang)*radius end
+    elseif activeRevolve == "Galaxy Spiral" then
+        local r, sAng = pRatio * radius + (radius * 0.2), pRatio * m_pi * 2 + localTime
+        if idx % 2 == 1 then sAng = sAng + m_pi end
+        x, z = m_cos(sAng) * r, m_sin(sAng) * r
+    elseif activeRevolve == "Crown" then
+        y = (radius / 1.5) + 3; x, z = m_cos(radRatio + localTime) * radius, m_sin(radRatio + localTime) * radius
+        y = y + m_sin(radRatio) * (radius * 0.2)
+    elseif activeRevolve == "DNA" then
+        local phase = (idx % 2 == 0) and 0 or m_pi
+        y = (idx - (totalProps/2)) * (radius/10); x, z = m_cos((idx * 0.5) + localTime + phase) * radius, m_sin((idx * 0.5) + localTime + phase) * radius
+    elseif activeRevolve == "Wings" then
+        local side, iOff = (idx % 2 == 0) and 1 or -1, m_ceil(idx / 2)
+        x, y, z = side * (iOff * (radius/5)), iOff * (radius/10), iOff * (radius/5)
+    elseif activeRevolve == "Discipline Army" then
+        local cols = m_ceil(m_sqrt(totalProps))
+        local col, row = (idx - 1) % cols, m_floor((idx - 1) / cols)
+        x, z = (col - cols/2) * (radius/2), (row - cols/2) * (radius/2)
+    elseif activeRevolve == "Flower" then
+        local r = radius * m_cos(5 * radRatio + localTime)
+        x, z = r * m_cos(radRatio), r * m_sin(radRatio)
+    elseif activeRevolve == "Domain Expansion" then
+        local phi, theta = m_acos(1 - 2 * pRatio), m_sqrt(totalProps * m_pi) * phi + localTime
+        x, y, z = radius * m_sin(phi) * m_cos(theta), radius * m_sin(phi) * m_sin(theta), radius * m_cos(phi)
+    elseif activeRevolve == "Snake Body" then x, z = m_sin(localTime - (idx * 0.2)) * radius, (idx * (radius/5)) end
+    
+    return Vector3.new(x, y, z)
+end
+
+local function getRotateCFrame(idx, radius, localTime)
+    if activeRotate == "Normal Rotate" then return CFrame.Angles(0, localTime * 2, 0)
+    elseif activeRotate == "Up Down" then return CFrame.new(0, m_sin(localTime * 4) * (radius/3), 0)
+    elseif activeRotate == "Wave" then return CFrame.new(0, m_sin(localTime * 4 + (idx%2 == 0 and 0 or m_pi)) * (radius/3), 0)
+    elseif activeRotate == "Side to Side" then return CFrame.new(0, 0, m_sin(localTime * 4) * (radius/3))
+    elseif activeRotate == "Side Wave" then return CFrame.new(0, 0, m_sin(localTime * 4 + (idx%2 == 0 and 0 or m_pi)) * (radius/3))
+    elseif activeRotate == "Glitchy" then return CFrame.new(math.random(-1,1)*(radius/10), math.random(-1,1)*(radius/10), math.random(-1,1)*(radius/10)) * CFrame.Angles(math.random(), math.random(), math.random())
+    elseif activeRotate == "Tilt Axis" then return CFrame.Angles(localTime * 2, 0, 0)
+    elseif activeRotate == "Roll Axis" then return CFrame.Angles(0, 0, localTime * 2)
+    elseif activeRotate == "Chaos" then return CFrame.Angles(localTime * 3, localTime * 2.5, localTime * 3.5)
+    elseif activeRotate == "Heartbeat" then return CFrame.new(0, 0, (m_sin(localTime * 8) > 0.8 and radius/2 or 0))
+    elseif activeRotate == "Nodding" then return CFrame.Angles(m_sin(localTime * 4), 0, 0)
+    elseif activeRotate == "Shaking" then return CFrame.Angles(0, m_sin(localTime * 8), 0)
+    elseif activeRotate == "Orbit Self" then return CFrame.Angles(0, localTime * 5, 0)
+    elseif activeRotate == "Propeller" then return CFrame.Angles(0, 0, localTime * 5)
+    elseif activeRotate == "Pendulum" then return CFrame.Angles(0, 0, m_sin(localTime * 3)) * CFrame.new(0, -radius/4, 0)
+    elseif activeRotate == "Breathing" then return CFrame.new(0, 0, m_sin(localTime * 2) * (radius/4))
+    elseif activeRotate == "Tremor" then return CFrame.new(m_sin(localTime*20)*0.5, 0, m_cos(localTime*20)*0.5)
+    elseif activeRotate == "Flipping" then return CFrame.Angles(localTime * 4, 0, 0)
+    elseif activeRotate == "Bounce" then return CFrame.new(0, m_abs(m_sin(localTime * 4)) * (radius/2), 0)
+    elseif activeRotate == "ZigZag" then return CFrame.new(0, (localTime * 5 % 2) - 1, (localTime * 3 % 2) - 1)
+    elseif activeRotate == "Spiral Self" then return CFrame.new(0, m_sin(localTime*3)*(radius/4), 0) * CFrame.Angles(0, localTime * 4, 0)
+    end
+    return CFrame.new()
+end
+
+local function getRobotOffset(localIdx, globalToggle)
+    local t, flip = (localIdx % 2 == 0) and not globalToggle or globalToggle, CFrame.Angles(0, m_pi, 0)
+    if localIdx == 1 then return (t and CFrame.new(0, -4, 1.8) or CFrame.new(0, -4, -0.5)) * flip
+    elseif localIdx == 2 then return t and CFrame.new(-1.5, -4, -2.5) or CFrame.new(1.5, -4, -2.5)
+    elseif localIdx == 3 then return t and CFrame.new(0, -1, -3.5) or CFrame.new(0, -1, -1.5)
+    elseif localIdx == 4 then return (t and CFrame.new(3, -4, 0) or CFrame.new(1.5, -4, 0)) * CFrame.Angles(0, -m_pi/2, 0)
+    elseif localIdx == 5 then return (t and CFrame.new(-3, -4, 0) or CFrame.new(-1.5, -4, 0)) * CFrame.Angles(0, -m_pi/2, 0)
+    else
+        local dAng, dDist = (localIdx * m_pi * 2) / 7, t and 3.5 or 1.5
+        local y = -4 + ((localIdx % 4) * 1.2)
+        local pos = Vector3.new(m_sin(dAng) * dDist, y, m_cos(dAng) * dDist)
+        return CFrame.lookAt(pos, Vector3.new(0, y, 0)) * flip
+    end
+end
+
+-- --- MASTER EXECUTION LOOP ---
+RunService.Heartbeat:Connect(function(dt)
+    if rgbMode ~= "OFF" and #cachedPartsForRGB > 0 then
+        local now, hueSpeed = tick(), 0.5 * dt
+        if rgbMode == "Dyna" then
+            local hue = (now * 0.2) % 1
+            local c = Color3.fromHSV(hue, 1, 1)
+            for i = 1, #cachedPartsForRGB do cachedPartsForRGB[i].Color = c end
+        elseif rgbMode == "Shift" then
+            local c = Color3.fromHSV((m_floor(now * 2) / 2) % 1, 1, 1)
+            for i = 1, #cachedPartsForRGB do cachedPartsForRGB[i].Color = c end
+        elseif rgbMode == "Disco" then
+            for i = 1, #cachedPartsForRGB do 
+                if m_floor(now * 10) % 3 == 0 then cachedPartsForRGB[i].Color = Color3.fromHSV(math.random(), 1, 1) end
+            end
+        end
+    end
+
+    if activeMode == "None" then return end
+    updatePropsCache()
+
+    if #cachedProps == 0 then
+        if tick() - lastStartTick > 3 then
+            activeMode = "None"
+            sendNotif("System", "No props exist. Stopped automatically.", 3)
+        end
+        return
+    end
+
+    local targetList = {}
+    for plr, _ in pairs(selectedPlayers) do
+        if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and plr.Character:FindFirstChild("Humanoid") then
+            table.insert(targetList, plr)
+        end
+    end
+
+    local tCount = #targetList
+    if tCount == 0 then return end
+
+    local now = tick()
+    local doNetworkUpdate = false
+    if (now - lastNetworkUpdate) >= NETWORK_RATE then lastNetworkUpdate = now; doNetworkUpdate = true end
+
+    -- Centralized lockedProp logic for AutoDuplicate modes
+    if activeMode == "Robot" or activeMode == "Chair" then
+        if not lockedProp or not lockedProp.Parent then lockedProp = cachedProps[1].prop end
+        if lockedProp and lockedProp.Parent then
+            pcall(function() lockedProp:PivotTo(CFrame.new(LOCKED_PROP_POSITION)) end)
+            -- Single, clean duplication loop
+            if now - lastAutoDuplicate >= AUTO_DUPLICATE_INTERVAL then
+                lastAutoDuplicate = now
+                local dupRemote = lockedProp:FindFirstChild("DuplicateProp")
+                if dupRemote then
+                    for i = 1, 14 do
+                        task.spawn(function() pcall(function() dupRemote:InvokeServer() end) end)
+                    end
+                end
+            end
+        end
+    else
+        lockedProp = nil
+    end
+
+    if activeMode == "Orbit" then
+        local radius, speed, cY = getRadius(), getSpeed() / 100, getCenterY()
+        local rX, rY, rZ = m_rad(getRotX()), m_rad(getRotY()), m_rad(getRotZ())
+        angle = angle + (speed * (dt * 60)) -- smooth orbit regardless of framerate
+
+        for idx, item in ipairs(cachedProps) do
+            local targetIdx = ((idx - 1) % tCount) + 1
+            local tRoot = targetList[targetIdx].Character.HumanoidRootPart
+            local propsForThisTarget = m_ceil(#cachedProps / tCount)
+            local localIdx = idx % propsForThisTarget
+
+            local revOffset = getRevolveOffset(localIdx, propsForThisTarget, radius, angle)
+            local rotCFrame = getRotateCFrame(localIdx, radius, angle)
+            local centerOffset = CFrame.new(0, cY, 0) * CFrame.Angles(rX, rY, rZ)
+            
+            local calcCFrame = (tRoot.CFrame * centerOffset) * CFrame.new(revOffset) * rotCFrame
+            
+            pcall(function() item.prop:PivotTo(calcCFrame) end)
+            if doNetworkUpdate then task.spawn(function() pcall(function() item.remote:InvokeServer(calcCFrame) end) end) end
+        end
+
+    elseif activeMode == "Robot" then
+        if (now - lastRobotTick) >= ROBOT_RATE then
+            lastRobotTick, robotSwitchToggle = now, not robotSwitchToggle
+            for tIdx, plr in ipairs(targetList) do
+                local tRoot = plr.Character.HumanoidRootPart
+                local predictedCF = tRoot.CFrame + (tRoot.AssemblyLinearVelocity * PREDICTION_FACTOR)
+                
+                local propsPerTarget = m_floor(#cachedProps / tCount)
+                if propsPerTarget == 0 then propsPerTarget = 1 end
+                local startIdx = ((tIdx - 1) * propsPerTarget) + 1
+                local endIdx = (tIdx == tCount) and #cachedProps or (tIdx * propsPerTarget)
+                
+                local localIdx = 1
+                for i = startIdx, endIdx do
+                    local item = cachedProps[i]
+                    if item and item.prop ~= lockedProp then
+                        local finalCFrame
+                        if tCount < 6 then
+                            local phi, theta = m_acos(1 - 2 * (localIdx / propsPerTarget)), m_pi * (1 + m_sqrt(5)) * localIdx
+                            local rMult = 2 + m_sin(now * 100 * ((localIdx % 2 == 0) and 2 or 1)) * 2
+                            local pos = predictedCF.Position + Vector3.new(rMult * m_sin(phi) * m_cos(theta), rMult * m_sin(phi) * m_sin(theta), rMult * m_cos(phi))
+                            finalCFrame = CFrame.lookAt(pos, predictedCF.Position) * CFrame.Angles(0, m_pi, 0)
+                        else
+                            finalCFrame = predictedCF * getRobotOffset(localIdx, robotSwitchToggle)
+                        end
+                        task.spawn(function() pcall(function() item.remote:InvokeServer(finalCFrame) end) end)
+                        localIdx = localIdx + 1
+                    end
+                end
+            end
+        end
+
+    elseif activeMode == "Chair" then
+        local assignedTracker = {}
+        for _, plr in ipairs(targetList) do
+            local char = plr.Character
+            local tRoot, humanoid = char.HumanoidRootPart, char.Humanoid
+            
+            voidedPlayers[plr] = (tRoot.Position.Y < -500)
+            local myItem = assignedItems[plr]
+            
+            if not myItem or not myItem.prop.Parent then
+                for _, rItem in ipairs(cachedProps) do
+                    if rItem.prop ~= lockedProp and not assignedTracker[rItem.remote] then
+                        myItem = rItem; assignedItems[plr] = rItem; break
+                    end
+                end
+            end
+            
+            if myItem then
+                assignedTracker[myItem.remote] = true
+                if not voidedPlayers[plr] then
+                    task.spawn(function()
+                        pcall(function()
+                            myItem.remote:InvokeServer(humanoid.Sit and CFrame.new(tRoot.Position.X, -1000, tRoot.Position.Z) or (tRoot.CFrame * CFrame.new(0, -2.5, 0)))
+                        end)
+                    end)
+                end
+            end
+        end
+    end
+end)
