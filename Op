@@ -552,6 +552,52 @@ antibangBtn.MouseButton1Click:Connect(function()
         end
     end
 
+--spin logic temporary --
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local root = character:WaitForChild("HumanoidRootPart")
+
+-- Save current transparency
+local originalTransparency = {}
+
+for _, obj in ipairs(character:GetDescendants()) do
+    if obj:IsA("BasePart") then
+        originalTransparency[obj] = obj.Transparency
+        obj.Transparency = 1
+    end
+end
+
+-- Lock current position
+local lockedCFrame = root.CFrame
+
+-- Spin at 4000 degrees/sec for 0.2 seconds
+local start = tick()
+local connection
+
+connection = RunService.Heartbeat:Connect(function()
+    local elapsed = tick() - start
+
+    if elapsed >= 0.2 then
+        connection:Disconnect()
+        root.CFrame = lockedCFrame
+
+        -- Restore transparency
+        for obj, transparency in pairs(originalTransparency) do
+            if obj and obj.Parent then
+                obj.Transparency = transparency
+            end
+        end
+
+        return
+    end
+
+    local angle = math.rad(4000) * elapsed
+    root.CFrame = lockedCFrame * CFrame.Angles(0, angle, 0)
+end)
+
     -- 7. Wait exactly 0.2 seconds
     task.wait(0.2)
 
