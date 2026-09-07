@@ -1,4 +1,6 @@
 
+-- failed copy avatar method reason Brookhaven new 3d clothes saving method 
+-- replicate apperance 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local CoreGui = game:GetService("CoreGui")
