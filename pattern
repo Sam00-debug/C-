@@ -38,7 +38,7 @@ local lastAutoDuplicate = 0
 local AUTO_DUPLICATE_INTERVAL = 1
 local LOCKED_PROP_POSITION = Vector3.new(200, 200, 200)
 
--- --- CACHE SYSTEM (Optimized to prevent Workspace scanning lag) ---
+
 local cachedProps = {}
 local cachedPartsForRGB = {}
 local lastCacheUpdate = 0
@@ -73,7 +73,7 @@ local function updatePropsCache()
     end
 end
 
--- --- THEME & COLORS ---
+-- --- colour 
 local Colors = {
     Background = Color3.fromRGB(15, 15, 17),
     Surface = Color3.fromRGB(24, 24, 28),
@@ -85,7 +85,7 @@ local Colors = {
     SubText = Color3.fromRGB(150, 150, 150)
 }
 
--- --- UTILITIES ---
+-- notif
 local function sendNotif(title, text, duration)
     pcall(function()
         StarterGui:SetCore("SendNotification", {Title = title, Text = text, Duration = duration or 5})
@@ -105,12 +105,12 @@ local function spawnProp(propName, category)
     end)
 end
 
--- ---  UI SETUP ---
+-- ---  UI 
 local gui = Instance.new("ScreenGui")
 gui.Name = "OrbitalPremiumUI"
 gui.ResetOnSpawn = false
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
--- Protect GUI if executor supports it
+
 pcall(function() gui.Parent = CoreGui end)
 if not gui.Parent then gui.Parent = lp.PlayerGui end
 
@@ -448,11 +448,11 @@ openRevolveBtn.MouseButton1Click:Connect(function() mainList.Visible = false; Tw
 local openRotateBtn = createMainBtn("🔄 Rotate Geo", Colors.Surface)
 openRotateBtn.MouseButton1Click:Connect(function() mainList.Visible = false; TweenService:Create(rotateMenu, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = UDim2.fromScale(0, 0)}):Play() end)
 
-local manualDupBtn = createMainBtn("📋 Manual Auto-Duplicate", Color3.fromRGB(60, 120, 200))
+local manualDupBtn = createMainBtn("📋 Auto-Duplicate", Color3.fromRGB(60, 120, 200))
 
-local orbitToggleBtn = createMainBtn("🪐 Mode: ORBIT", Colors.Primary, Color3.new(0,0,0))
-local robotToggleBtn = createMainBtn("🤖 Mode: ROBOT", Colors.Surface)
-local bedToggleBtn = createMainBtn("🛏️ Mode: CHAIR", Colors.Surface)
+local orbitToggleBtn = createMainBtn("🪐 Mode: ORBIT PATTERN", Colors.Primary, Color3.new(0,0,0))
+local robotToggleBtn = createMainBtn("🤖 Mode: ROBOT TROLL", Colors.Surface)
+local bedToggleBtn = createMainBtn("🛏️ Mode: CHAIR TROLL", Colors.Surface)
 
 local function updateModeUI()
     orbitToggleBtn.BackgroundColor3 = (targetMode == "Orbit") and Colors.Primary or Colors.Surface
@@ -486,7 +486,7 @@ local toggleRow = Instance.new("Frame", mainList); toggleRow.Size = UDim2.new(1,
 local onBtn = Instance.new("TextButton", toggleRow); onBtn.Size = UDim2.new(0.48, 0, 1, 0); onBtn.BackgroundColor3 = Color3.fromRGB(20, 180, 255); onBtn.Text = "▶ START"; onBtn.TextColor3 = Color3.new(0,0,0); onBtn.Font = Enum.Font.GothamBold; onBtn.TextSize = 9; Instance.new("UICorner", onBtn).CornerRadius = UDim.new(0, 4)
 local offBtn = Instance.new("TextButton", toggleRow); offBtn.Size = UDim2.new(0.48, 0, 1, 0); offBtn.Position = UDim2.new(0.52, 0, 0, 0); offBtn.BackgroundColor3 = Colors.Danger; offBtn.Text = "⏹ STOP"; offBtn.TextColor3 = Colors.Text; offBtn.Font = Enum.Font.GothamBold; offBtn.TextSize = 9; Instance.new("UICorner", offBtn).CornerRadius = UDim.new(0, 4)
 
--- --- EXECUTION BINDINGS ---
+
 onBtn.MouseButton1Click:Connect(function()
     activeMode = targetMode
     assignedItems = {}
@@ -518,7 +518,7 @@ manualDupBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- --- MATH GEOMETRY ENGINE (Optimized) ---
+-- --- MATH GEOMETRY 
 local function getRevolveOffset(idx, totalProps, radius, localTime)
     local x, y, z = 0, 0, 0
     local pRatio = idx / totalProps
@@ -627,7 +627,7 @@ local function getRobotOffset(localIdx, globalToggle)
     end
 end
 
--- --- MASTER EXECUTION LOOP ---
+-- main loop  ---
 RunService.Heartbeat:Connect(function(dt)
     if rgbMode ~= "OFF" and #cachedPartsForRGB > 0 then
         local now, hueSpeed = tick(), 0.5 * dt
@@ -670,12 +670,12 @@ RunService.Heartbeat:Connect(function(dt)
     local doNetworkUpdate = false
     if (now - lastNetworkUpdate) >= NETWORK_RATE then lastNetworkUpdate = now; doNetworkUpdate = true end
 
-    -- Centralized lockedProp logic for AutoDuplicate modes
+    -- lock
     if activeMode == "Robot" or activeMode == "Chair" then
         if not lockedProp or not lockedProp.Parent then lockedProp = cachedProps[1].prop end
         if lockedProp and lockedProp.Parent then
             pcall(function() lockedProp:PivotTo(CFrame.new(LOCKED_PROP_POSITION)) end)
-            -- Single, clean duplication loop
+            -- duppp
             if now - lastAutoDuplicate >= AUTO_DUPLICATE_INTERVAL then
                 lastAutoDuplicate = now
                 local dupRemote = lockedProp:FindFirstChild("DuplicateProp")
