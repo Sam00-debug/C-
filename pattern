@@ -715,9 +715,20 @@ RunService.Heartbeat:Connect(function(dt)
         if (now - lastRobotTick) >= ROBOT_RATE then
             lastRobotTick, robotSwitchToggle = now, not robotSwitchToggle
             for tIdx, plr in ipairs(targetList) do
-                local tRoot = plr.Character.HumanoidRootPart
-                local predictedCF = tRoot.CFrame + (tRoot.AssemblyLinearVelocity * PREDICTION_FACTOR)
-                
+                local character = plr.Character
+
+local leftLeg = character:FindFirstChild("LeftFoot")
+	or character:FindFirstChild("Left Leg")
+
+local rightLeg = character:FindFirstChild("RightFoot")
+	or character:FindFirstChild("Right Leg")
+
+local leg = leftLeg or rightLeg
+
+if leg then
+	local predictedCF = leg.CFrame + (leg.AssemblyLinearVelocity * PREDICTION_FACTOR)
+
+	
                 local propsPerTarget = m_floor(#cachedProps / tCount)
                 if propsPerTarget == 0 then propsPerTarget = 1 end
                 local startIdx = ((tIdx - 1) * propsPerTarget) + 1
@@ -747,8 +758,8 @@ RunService.Heartbeat:Connect(function(dt)
         local assignedTracker = {}
         for _, plr in ipairs(targetList) do
             local char = plr.Character
-            local tRoot, humanoid = char.HumanoidRootPart, char.Humanoid
-            
+            local tRoot, humanoid = char:FindFirstChild("LeftFoot") or char:FindFirstChild("Left Leg"), char.Humanoid
+
             voidedPlayers[plr] = (tRoot.Position.Y < -500)
             local myItem = assignedItems[plr]
             
