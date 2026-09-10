@@ -999,3 +999,429 @@ task.defer(function()
 		applyPack(saved)
 	end
 end)
+
+
+
+
+
+
+
+
+
+
+--[[
+--// NOTHING - Animation Pack Fetcher
+
+
+local Players = game:GetService("Players")
+local AvatarEditorService = game:GetService("AvatarEditorService")
+local UserInputService = game:GetService("UserInputService")
+
+local Player = Players.LocalPlayer
+
+--==================================================
+-- GUI
+--==================================================
+
+local Gui = Instance.new("ScreenGui")
+Gui.Name = "NothingAnimationFetcher"
+Gui.ResetOnSpawn = false
+Gui.Parent = Player:WaitForChild("PlayerGui")
+
+local Main = Instance.new("Frame")
+Main.Size = UDim2.new(0, 360, 0, 245)
+Main.Position = UDim2.new(0.5, -180, 0.5, -122)
+Main.BackgroundColor3 = Color3.fromRGB(15, 15, 17)
+Main.BorderSizePixel = 0
+Main.Parent = Gui
+
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 10)
+
+local Stroke = Instance.new("UIStroke")
+Stroke.Color = Color3.fromRGB(45, 45, 50)
+Stroke.Thickness = 1
+Stroke.Parent = Main
+
+--==================================================
+-- DRAG
+--==================================================
+
+local Dragging = false
+local DragStart
+local StartPos
+
+local function updateDrag(input)
+
+	local Delta = input.Position - DragStart
+
+	Main.Position = UDim2.new(
+		StartPos.X.Scale,
+		StartPos.X.Offset + Delta.X,
+		StartPos.Y.Scale,
+		StartPos.Y.Offset + Delta.Y
+	)
+
+end
+
+Main.InputBegan:Connect(function(input)
+
+	if input.UserInputType == Enum.UserInputType.MouseButton1
+		or input.UserInputType == Enum.UserInputType.Touch then
+
+		Dragging = true
+		DragStart = input.Position
+		StartPos = Main.Position
+
+	end
+
+end)
+
+Main.InputEnded:Connect(function(input)
+
+	if input.UserInputType == Enum.UserInputType.MouseButton1
+		or input.UserInputType == Enum.UserInputType.Touch then
+
+		Dragging = false
+
+	end
+
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+
+	if Dragging and (
+		input.UserInputType == Enum.UserInputType.MouseMovement
+		or input.UserInputType == Enum.UserInputType.Touch
+	) then
+
+		updateDrag(input)
+
+	end
+
+end)
+
+--==================================================
+-- TITLE
+--==================================================
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, -20, 0, 32)
+Title.Position = UDim2.new(0, 10, 0, 3)
+Title.BackgroundTransparency = 1
+Title.Text = "ANIMATION PACK"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.TextSize = 14
+Title.Font = Enum.Font.GothamBold
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = Main
+
+-- Small status
+local Status = Instance.new("TextLabel")
+Status.Size = UDim2.new(1, -20, 0, 20)
+Status.Position = UDim2.new(0, 10, 0, 30)
+Status.BackgroundTransparency = 1
+Status.Text = "Ready"
+Status.TextColor3 = Color3.fromRGB(130, 130, 135)
+Status.TextSize = 11
+Status.Font = Enum.Font.Gotham
+Status.TextXAlignment = Enum.TextXAlignment.Left
+Status.Parent = Main
+
+--==================================================
+-- TEXTBOX
+--==================================================
+
+local Box = Instance.new("TextBox")
+Box.Size = UDim2.new(1, -20, 0, 135)
+Box.Position = UDim2.new(0, 10, 0, 53)
+Box.BackgroundColor3 = Color3.fromRGB(24, 24, 28)
+Box.TextColor3 = Color3.fromRGB(230, 230, 230)
+Box.PlaceholderColor3 = Color3.fromRGB(100, 100, 105)
+Box.PlaceholderText = "Animation pack output..."
+Box.Text = ""
+Box.TextSize = 11
+Box.Font = Enum.Font.Code
+Box.TextXAlignment = Enum.TextXAlignment.Left
+Box.TextYAlignment = Enum.TextYAlignment.Top
+Box.MultiLine = true
+Box.ClearTextOnFocus = false
+Box.TextWrapped = false
+Box.Parent = Main
+
+Instance.new("UICorner", Box).CornerRadius = UDim.new(0, 7)
+
+--==================================================
+-- FETCH
+--==================================================
+
+local Fetch = Instance.new("TextButton")
+Fetch.Size = UDim2.new(0.5, -15, 0, 40)
+Fetch.Position = UDim2.new(0, 10, 1, -50)
+Fetch.BackgroundColor3 = Color3.fromRGB(30, 215, 96)
+Fetch.Text = "FETCH"
+Fetch.TextColor3 = Color3.fromRGB(0, 0, 0)
+Fetch.TextSize = 12
+Fetch.Font = Enum.Font.GothamBold
+Fetch.Parent = Main
+
+Instance.new("UICorner", Fetch).CornerRadius = UDim.new(0, 7)
+
+--==================================================
+-- COPY
+--==================================================
+
+local Copy = Instance.new("TextButton")
+Copy.Size = UDim2.new(0.5, -15, 0, 40)
+Copy.Position = UDim2.new(0.5, 5, 1, -50)
+Copy.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+Copy.Text = "COPY"
+Copy.TextColor3 = Color3.fromRGB(255, 255, 255)
+Copy.TextSize = 12
+Copy.Font = Enum.Font.GothamBold
+Copy.Parent = Main
+
+Instance.new("UICorner", Copy).CornerRadius = UDim.new(0, 7)
+
+--==================================================
+-- HELPERS
+--==================================================
+
+local function getId(animation)
+
+	if not animation then
+		return 0
+	end
+
+	local id = string.match(animation.AnimationId or "", "%d+")
+
+	return tonumber(id) or 0
+
+end
+
+
+local function getAnimateId(Animate, folderName, animationName)
+
+	if not Animate then
+		return 0
+	end
+
+	local Folder = Animate:FindFirstChild(folderName)
+
+	if not Folder then
+		return 0
+	end
+
+	local Animation = Folder:FindFirstChild(animationName)
+
+	if not Animation then
+		return 0
+	end
+
+	return getId(Animation)
+
+end
+
+--==================================================
+-- FIND BUNDLE NAME
+--==================================================
+
+local function findPackName(ids)
+
+	for _, id in ipairs(ids) do
+
+		if id > 0 then
+
+			local success, pages = pcall(function()
+
+				return AvatarEditorService:GetBundlesByAssetIdAsync(
+					id,
+					100
+				)
+
+			end)
+
+			if success and pages then
+
+				for _, bundle in ipairs(pages:GetCurrentPage()) do
+
+					if bundle.Name then
+						return bundle.Name
+					end
+
+				end
+
+			end
+
+		end
+
+	end
+
+	return "Unknown Animation Pack"
+
+end
+
+--==================================================
+-- FETCH PACK
+--==================================================
+
+local function fetchPack()
+
+	Status.Text = "Fetching..."
+
+	Box.Text = ""
+
+	local Character = Player.Character or Player.CharacterAdded:Wait()
+
+	local Humanoid = Character:FindFirstChildOfClass("Humanoid")
+
+	if not Humanoid then
+
+		Status.Text = "Humanoid not found"
+		return
+
+	end
+
+	local success, Description = pcall(function()
+
+		return Humanoid:GetAppliedDescription()
+
+	end)
+
+	if not success or not Description then
+
+		Status.Text = "Failed to get avatar"
+		return
+
+	end
+
+	-- Main animations
+
+	local Walk = Description.WalkAnimation
+	local Run = Description.RunAnimation
+	local Jump = Description.JumpAnimation
+	local Fall = Description.FallAnimation
+	local Climb = Description.ClimbAnimation
+	local Swim = Description.SwimAnimation
+	local Idle = Description.IdleAnimation
+
+	-- Animate script
+
+	local Animate = Character:FindFirstChild("Animate")
+
+	local Animation1 =
+		getAnimateId(Animate, "idle", "Animation1")
+
+	local Animation2 =
+		getAnimateId(Animate, "idle", "Animation2")
+
+	local SwimIdle =
+		getAnimateId(Animate, "swimidle", "SwimIdle")
+
+	-- Fallbacks
+
+	if Animation1 == 0 then
+		Animation1 = Idle
+	end
+
+	if Animation2 == 0 then
+		Animation2 = Animation1
+	end
+
+	-- Find name
+
+	local PackName = findPackName({
+
+		Walk,
+		Run,
+		Jump,
+		Fall,
+		Climb,
+		Swim,
+		Animation1,
+		Animation2
+
+	})
+
+	--==================================================
+	-- OUTPUT
+	--==================================================
+
+	local Output = string.format([[
+["%s"] = {
+	WalkAnim = %d,
+	RunAnim = %d,
+	JumpAnim = %d,
+	FallAnim = %d,
+	SwimIdle = %d,
+	Swim = %d,
+	Animation1 = %d,
+	Animation2 = %d,
+	ClimbAnim = %d
+},]],
+
+		PackName,
+		Walk,
+		Run,
+		Jump,
+		Fall,
+		SwimIdle,
+		Swim,
+		Animation1,
+		Animation2,
+		Climb
+
+	)
+
+	Box.Text = Output
+
+	Status.Text = "Pack found: " .. PackName
+
+end
+
+--==================================================
+-- BUTTONS
+--==================================================
+
+Fetch.MouseButton1Click:Connect(function()
+
+	Fetch.Text = "..."
+
+	task.spawn(function()
+
+		fetchPack()
+
+		Fetch.Text = "FETCH"
+
+	end)
+
+end)
+
+
+Copy.MouseButton1Click:Connect(function()
+
+	if Box.Text == "" then
+		return
+	end
+
+	if setclipboard then
+
+		setclipboard(Box.Text)
+
+		Copy.Text = "COPIED"
+
+		task.delay(1, function()
+			Copy.Text = "COPY"
+		end)
+
+	else
+
+		Copy.Text = "NO CLIPBOARD"
+
+		task.delay(1, function()
+			Copy.Text = "COPY"
+		end)
+
+	end
+
+end) 
+]]
