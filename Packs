@@ -5,6 +5,409 @@ local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
 
 local PACKS = {
+
+
+	["Monkey Animation Pack"] = {
+		WalkAnim = 136060323962314,
+		RunAnim = 140718527490876,
+		JumpAnim = 121175674540094,
+		FallAnim = 117671681231564,
+		SwimIdle = 0,
+		Swim = 100743458042729,
+		Animation1 = 134953487950642,
+		Animation2 = 134953487950642,
+		ClimbAnim = 122639532724805
+	},
+	["Cool Boy Floating Aura"] = {
+		WalkAnim = 138593385056356,
+		RunAnim = 138761087398466,
+		JumpAnim = 83805029805026,
+		FallAnim = 130748737873692,
+		SwimIdle = 0,
+		Swim = 106250550031017,
+		Animation1 = 126921462817172,
+		Animation2 = 126921462817172,
+		ClimbAnim = 92874125671939
+	},
+	["Gojo Animation Pack"] = {
+		WalkAnim = 87821304228339,
+		RunAnim = 104995016710777,
+		JumpAnim = 122382654252767,
+		FallAnim = 85276348290613,
+		SwimIdle = 0,
+		Swim = 91931263516971,
+		Animation1 = 91833267843461,
+		Animation2 = 126614275663887,
+		ClimbAnim = 96652786730982
+	},
+	["⛸️ Ice Skating"] = {
+		WalkAnim = 91935280836759,
+		RunAnim = 130910904116692,
+		JumpAnim = 132154248455526,
+		FallAnim = 111006497369256,
+		SwimIdle = 0,
+		Swim = 116301984757012,
+		Animation1 = 132929066468691,
+		Animation2 = 73699339653533,
+		ClimbAnim = 102058002345694
+	},
+	["Wandering Ghost Animation Pack"] = {
+		WalkAnim = 139643694246972,
+		RunAnim = 108714552253324,
+		JumpAnim = 107961969467351,
+		FallAnim = 76182427728848,
+		SwimIdle = 0,
+		Swim = 99131492985191,
+		Animation1 = 87735242184133,
+		Animation2 = 87735242184133,
+		ClimbAnim = 138458871147280
+	},
+	["Mafia Boss Animation Pack"] = {
+		WalkAnim = 137639507915743,
+		RunAnim = 127112941824252,
+		JumpAnim = 109115809372480,
+		FallAnim = 139885481339333,
+		SwimIdle = 0,
+		Swim = 98231997651207,
+		Animation1 = 74711895572854,
+		Animation2 = 74711895572854,
+		ClimbAnim = 94157946527913
+	},
+	["Effortless Endless Aura Floating"] = {
+		WalkAnim = 70581876739790,
+		RunAnim = 88641666654396,
+		JumpAnim = 73692948224947,
+		FallAnim = 138513793178653,
+		SwimIdle = 0,
+		Swim = 95808290219835,
+		Animation1 = 75806320773060,
+		Animation2 = 85479450760968,
+		ClimbAnim = 106778402374562
+	},
+	["Anime Aura Bounce"] = {
+		WalkAnim = 117631253598633,
+		RunAnim = 110823553488811,
+		JumpAnim = 86338939197323,
+		FallAnim = 76120703503499,
+		SwimIdle = 0,
+		Swim = 73658852103423,
+		Animation1 = 109812899791215,
+		Animation2 = 103995367806198,
+		ClimbAnim = 85455211554986
+	},
+	["Endless Levitating Aura"] = {
+		WalkAnim = 101401670392323,
+		RunAnim = 98775178030183,
+		JumpAnim = 81745729002991,
+		FallAnim = 121128633842201,
+		SwimIdle = 0,
+		Swim = 76641694464522,
+		Animation1 = 70418003075810,
+		Animation2 = 78801487038911,
+		ClimbAnim = 120507931847610
+	},
+	["Hatsune Miku VOCALOID"] = {
+		WalkAnim = 115076409379509,
+		RunAnim = 132703832811724,
+		JumpAnim = 104800719202256,
+		FallAnim = 79679642704558,
+		SwimIdle = 0,
+		Swim = 123121833221754,
+		Animation1 = 105521323066042,
+		Animation2 = 132090379340717,
+		ClimbAnim = 124311346839421
+	},
+	["Sleepy Zombie Animation Pack"] = {
+		WalkAnim = 107449839532520,
+		RunAnim = 104584436783768,
+		JumpAnim = 87268353516404,
+		FallAnim = 86816538631152,
+		SwimIdle = 0,
+		Swim = 92739431698158,
+		Animation1 = 86480251359194,
+		Animation2 = 86480251359194,
+		ClimbAnim = 132818206237851
+	},
+	["Nonchalant"] = {
+		WalkAnim = 89554541453975,
+		RunAnim = 138879401523578,
+		JumpAnim = 140377637796320,
+		FallAnim = 106324178713068,
+		SwimIdle = 0,
+		Swim = 112452404226212,
+		Animation1 = 103551093140086,
+		Animation2 = 85206172526076,
+		ClimbAnim = 82838703660688
+	},
+	["Cool Boy"] = {
+		WalkAnim = 137785643057516,
+		RunAnim = 85494649926570,
+		JumpAnim = 133898250810070,
+		FallAnim = 121898694120755,
+		SwimIdle = 0,
+		Swim = 97318831452205,
+		Animation1 = 138243880544114,
+		Animation2 = 138243880544114,
+		ClimbAnim = 109255428875312
+	},
+	["Joyful Animation Pack"] = {
+		WalkAnim = 139313407695532,
+		RunAnim = 79320869574382,
+		JumpAnim = 131930671650999,
+		FallAnim = 131117498790057,
+		SwimIdle = 0,
+		Swim = 126095360657826,
+		Animation1 = 134833459307654,
+		Animation2 = 134833459307654,
+		ClimbAnim = 96747830207189
+	},
+	["Chill Sans Animation Pack"] = {
+		WalkAnim = 72674347277707,
+		RunAnim = 71478173638235,
+		JumpAnim = 91421196767692,
+		FallAnim = 110692746605068,
+		SwimIdle = 0,
+		Swim = 82787252731052,
+		Animation1 = 119023489901719,
+		Animation2 = 119023489901719,
+		ClimbAnim = 110657410245187
+	},
+	["Girl Boss"] = {
+		WalkAnim = 139844094650898,
+		RunAnim = 117605897887039,
+		JumpAnim = 140026102623246,
+		FallAnim = 86187846912270,
+		SwimIdle = 0,
+		Swim = 122971733814893,
+		Animation1 = 129656942792525,
+		Animation2 = 129656942792525,
+		ClimbAnim = 94548540472517
+	},
+	["Cute Shy Animation Pack"] = {
+		WalkAnim = 88354674253567,
+		RunAnim = 108892505937356,
+		JumpAnim = 112598844654591,
+		FallAnim = 116336440124933,
+		SwimIdle = 0,
+		Swim = 105086806405008,
+		Animation1 = 96218620830862,
+		Animation2 = 90414556206637,
+		ClimbAnim = 108646387674307
+	},
+	["Social Anxiety"] = {
+		WalkAnim = 120883274762528,
+		RunAnim = 109934846900463,
+		JumpAnim = 94778609167745,
+		FallAnim = 92704985508053,
+		SwimIdle = 0,
+		Swim = 121066908207013,
+		Animation1 = 116994561820423,
+		Animation2 = 116994561820423,
+		ClimbAnim = 82905220322821
+	},
+	["Competent"] = {
+		WalkAnim = 123321628856372,
+		RunAnim = 121093676807537,
+		JumpAnim = 97770192168063,
+		FallAnim = 93095471463296,
+		SwimIdle = 0,
+		Swim = 76929827202134,
+		Animation1 = 125658827625997,
+		Animation2 = 96433331967523,
+		ClimbAnim = 97137023603110
+	},
+	["Cute Joy"] = {
+		WalkAnim = 84929464233480,
+		RunAnim = 136095340410517,
+		JumpAnim = 91003269917350,
+		FallAnim = 99857206072384,
+		SwimIdle = 0,
+		Swim = 83689554087147,
+		Animation1 = 137426886866275,
+		Animation2 = 125627081294873,
+		ClimbAnim = 92360639959809
+	},
+	["Chill Boy"] = {
+		WalkAnim = 125935884379030,
+		RunAnim = 140668178711040,
+		JumpAnim = 121044668035612,
+		FallAnim = 90121153486837,
+		SwimIdle = 0,
+		Swim = 74464049474878,
+		Animation1 = 106185312673337,
+		Animation2 = 106185312673337,
+		ClimbAnim = 107026478538282
+	},
+	["Cute Bouncy"] = {
+		WalkAnim = 105398643971664,
+		RunAnim = 81980688988481,
+		JumpAnim = 95845383984913,
+		FallAnim = 91206221270256,
+		SwimIdle = 0,
+		Swim = 137674505873151,
+		Animation1 = 88464649697812,
+		Animation2 = 120712697072374,
+		ClimbAnim = 77455242814172
+	},
+	["Ultron Animation Pack"] = {
+		WalkAnim = 106244345643132,
+		RunAnim = 102654826655551,
+		JumpAnim = 110139593973756,
+		FallAnim = 79629799257731,
+		SwimIdle = 0,
+		Swim = 123563937372535,
+		Animation1 = 116060069409333,
+		Animation2 = 134605851728942,
+		ClimbAnim = 92583115661296
+	},
+	["Aura Animation Pack"] = {
+		WalkAnim = 107974792006222,
+		RunAnim = 126690709549004,
+		JumpAnim = 131932286655764,
+		FallAnim = 74746323396145,
+		SwimIdle = 0,
+		Swim = 128846499821276,
+		Animation1 = 116944673851292,
+		Animation2 = 105356446763414,
+		ClimbAnim = 103443334658077
+	},
+	["Tall Animation Pack"] = {
+		WalkAnim = 123508501792913,
+		RunAnim = 98056725472433,
+		JumpAnim = 112077323121218,
+		FallAnim = 107913363790538,
+		SwimIdle = 0,
+		Swim = 98393291136756,
+		Animation1 = 119900649290589,
+		Animation2 = 79810617204918,
+		ClimbAnim = 118708908515992
+	},
+	["😌 Nonchalant Animation Pack"] = {
+		WalkAnim = 137080061938111,
+		RunAnim = 138817543112482,
+		JumpAnim = 101362426464232,
+		FallAnim = 137504551310868,
+		SwimIdle = 0,
+		Swim = 121597417409288,
+		Animation1 = 129560720895838,
+		Animation2 = 116285713212355,
+		ClimbAnim = 112352256883383
+	},
+	["Furry Animation Pack"] = {
+		WalkAnim = 124732270095091,
+		RunAnim = 78822241982559,
+		JumpAnim = 106970102410990,
+		FallAnim = 75892211224822,
+		SwimIdle = 0,
+		Swim = 105993144805512,
+		Animation1 = 111821292044705,
+		Animation2 = 90705157329932,
+		ClimbAnim = 101997929337327
+	},
+	["Skater Animation Pack"] = {
+		WalkAnim = 109347720355132,
+		RunAnim = 80994788720568,
+		JumpAnim = 73602597451548,
+		FallAnim = 102518241380226,
+		SwimIdle = 0,
+		Swim = 74137299500673,
+		Animation1 = 137443659935486,
+		Animation2 = 117304445977546,
+		ClimbAnim = 78799042189589
+	},
+	["🤸 Handstand Animation Pack"] = {
+		WalkAnim = 120779828540112,
+		RunAnim = 74743923335305,
+		JumpAnim = 106738358000265,
+		FallAnim = 140035581518979,
+		SwimIdle = 0,
+		Swim = 93107206685726,
+		Animation1 = 73956906322787,
+		Animation2 = 135783589150448,
+		ClimbAnim = 105106152978552
+	},
+	["Cute Animation Pack"] = {
+		WalkAnim = 99840464746127,
+		RunAnim = 73656936285475,
+		JumpAnim = 121638805023018,
+		FallAnim = 103433308815918,
+		SwimIdle = 0,
+		Swim = 106328912863928,
+		Animation1 = 129751609795815,
+		Animation2 = 92673966405462,
+		ClimbAnim = 71446019452035
+	},
+	["Cute Animation Pack V2"] = {
+		WalkAnim = 129081631925429,
+		RunAnim = 106225307541637,
+		JumpAnim = 118216190885024,
+		FallAnim = 120436889637318,
+		SwimIdle = 0,
+		Swim = 102260064079692,
+		Animation1 = 138347770262046,
+		Animation2 = 131834925395849,
+		ClimbAnim = 83450718624718
+	},
+	["🌜 Dreamy Aura Animation Pack"] = {
+		WalkAnim = 140236552335090,
+		RunAnim = 86404050564430,
+		JumpAnim = 122416620253122,
+		FallAnim = 111655584291361,
+		SwimIdle = 0,
+		Swim = 87494549118785,
+		Animation1 = 134461155171978,
+		Animation2 = 129948600295809,
+		ClimbAnim = 117378264371555
+	},
+	["Kawaii Animation Pack"] = {
+		WalkAnim = 79177448240579,
+		RunAnim = 71632541042172,
+		JumpAnim = 105876388602982,
+		FallAnim = 137590039087467,
+		SwimIdle = 0,
+		Swim = 92467188495424,
+		Animation1 = 137434897497548,
+		Animation2 = 74642942460483,
+		ClimbAnim = 76215614145945
+	},
+	["Floating Animation Pack"] = {
+		WalkAnim = 86848847379619,
+		RunAnim = 82161077326096,
+		JumpAnim = 135785005279309,
+		FallAnim = 74200937602556,
+		SwimIdle = 0,
+		Swim = 123339640480297,
+		Animation1 = 71638717540676,
+		Animation2 = 76158324638472,
+		ClimbAnim = 131780270861622
+	},
+	["Realistic Male 01"] = {
+		WalkAnim = 139525865069063,
+		RunAnim = 130062168996362,
+		JumpAnim = 90526784917601,
+		FallAnim = 88683402647046,
+		SwimIdle = 0,
+		Swim = 83944244201171,
+		Animation1 = 128667162266929,
+		Animation2 = 124366149420254,
+		ClimbAnim = 94323572155517
+	},
+	["adidas Sports Animation Pack"] = {
+		WalkAnim = 18538146480,
+		RunAnim = 124765145869332,
+		JumpAnim = 115715495289805,
+		FallAnim = 18538164337,
+		SwimIdle = 109346520324160,
+		Swim = 106537993816942,
+		Animation1 = 128667162266929,
+		Animation2 = 124366149420254,
+		ClimbAnim = 123695349157584
+	},
+
+
+
+
+
 	["Adidas Sports"] = { WalkAnim = 18537392113, RunAnim = 18537384940, JumpAnim = 18537380791, FallAnim = 18537367238, SwimIdle = 18537387180, Swim = 18537389531, Animation1 = 18537376492, Animation2 = 18537371272, ClimbAnim = 18537363391 },
 	["Adidas Community"] = { WalkAnim = 122150855457006, RunAnim = 82598234841035, JumpAnim = 75290611992385, FallAnim = 98600215928904, SwimIdle = 109346520324160, Swim = 133308483266208, Animation1 = 122257458498464, Animation2 = 102357151005774, ClimbAnim = 88763136693023 },
 	["Adidas Aura"] = { WalkAnim = 83842218823011, RunAnim = 118320322718866, JumpAnim = 109996626521204, FallAnim = 95603166884636, SwimIdle = 94922130551805, Swim = 134530128383903, Animation1 = 110211186840347, Animation2 = 114191137265065, ClimbAnim = 97824616490448 },
