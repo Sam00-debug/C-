@@ -1,0 +1,538 @@
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local player = Players.LocalPlayer
+
+-- == DO NOT TOUCH: ORIGINAL ANIMATION PACKS ==
+local PACKS = {
+	["Adidas Sports"] = { WalkAnim = 18537392113, RunAnim = 18537384940, JumpAnim = 18537380791, FallAnim = 18537367238, SwimIdle = 18537387180, Swim = 18537389531, Animation1 = 18537376492, Animation2 = 18537371272, ClimbAnim = 18537363391 },
+	["Adidas Community"] = { WalkAnim = 122150855457006, RunAnim = 82598234841035, JumpAnim = 75290611992385, FallAnim = 98600215928904, SwimIdle = 109346520324160, Swim = 133308483266208, Animation1 = 122257458498464, Animation2 = 102357151005774, ClimbAnim = 88763136693023 },
+	["Adidas Aura"] = { WalkAnim = 83842218823011, RunAnim = 118320322718866, JumpAnim = 109996626521204, FallAnim = 95603166884636, SwimIdle = 94922130551805, Swim = 134530128383903, Animation1 = 110211186840347, Animation2 = 114191137265065, ClimbAnim = 97824616490448 },
+	["Wicked Popular"] = { WalkAnim = 92072849924640, RunAnim = 72301599441680, JumpAnim = 104325245285198, FallAnim = 121152442762481, Animation1 = 118832222982049, ClimbAnim = 131326830509784, SwimIdle = 113199415118199, Swim = 99384245425157, Animation2 = 76049494037641 },
+	Elder = { WalkAnim = 10921111375, RunAnim = 10921104374, JumpAnim = 10921107367, FallAnim = 10921105765, SwimIdle = 10921110146, Swim = 10921108971, ClimbAnim = 10921100400, Animation1 = 10921101664, Animation2 = 10921102574 },
+	Zombie = { WalkAnim = 10921355261, RunAnim = 616163682, JumpAnim = 10921351278, FallAnim = 10921350320, SwimIdle = 10921353442, Swim = 10921352344, Animation1 = 10921344533, Animation2 = 10921345304, ClimbAnim = 10921343576 },
+	Mage = { WalkAnim = 10921152678, RunAnim = 10921148209, JumpAnim = 10921149743, FallAnim = 10921148939, SwimIdle = 10921151661, Swim = 10921150788, ClimbAnim = 10921143404, Animation1 = 10921144709, Animation2 = 10921145797 },
+	["Catwalk Glam"] = { WalkAnim = 109168724482748, RunAnim = 81024476153754, JumpAnim = 116936326516985, FallAnim = 92294537340807, SwimIdle = 98854111361360, Swim = 134591743181628, ClimbAnim = 119377220967554, Animation1 = 133806214992291, Animation2 = 94970088341563 },
+	Astronaut = { WalkAnim = 10921046031, RunAnim = 10921039308, JumpAnim = 10921042494, FallAnim = 10921040576, SwimIdle = 10921045006, Swim = 10921044000, ClimbAnim = 10921032124, Animation1 = 10921034824, Animation2 = 10921036806 },
+	['Wicked "Dancing Through Life"'] = { WalkAnim = 73718308412641, RunAnim = 135515454877967, JumpAnim = 78508480717326, FallAnim = 78147885297412, SwimIdle = 129183123083281, Swim = 110657013921774, ClimbAnim = 129447497744818, Animation1 = 92849173543269, Animation2 = 132238900951109 },
+	Werewolf = { WalkAnim = 10921342074, RunAnim = 10921336997, JumpAnim = nil, FallAnim = 10921337907, SwimIdle = 10921341319, Swim = 10921340419, ClimbAnim = 10921329322, Animation1 = 10921330408, Animation2 = 10921333667 },
+	Superhero = { WalkAnim = 10921298616, RunAnim = 10921291831, JumpAnim = 10921294559, FallAnim = 10921293373, SwimIdle = 10921297391, Swim = 10921295495, ClimbAnim = 10921286911, Animation1 = 10921288909, Animation2 = 10921290167 },
+	Toy = { WalkAnim = 10921312010, RunAnim = 10921306285, JumpAnim = 10921308158, FallAnim = 10921307241, SwimIdle = 10921310341, Swim = 10921309319, ClimbAnim = 10921300839, Animation1 = 10921301576, Animation2 = nil },
+	["No Boundaries"] = { WalkAnim = 18747074203, RunAnim = 18747070484, JumpAnim = 18747069148, FallAnim = 18747062535, SwimIdle = 18747071682, Swim = 18747073181, ClimbAnim = 18747060903, Animation1 = 18747067405, Animation2 = 18747063918 },
+	NFL = { WalkAnim = 110358958299415, RunAnim = 117333533048078, JumpAnim = 119846112151352, FallAnim = 129773241321032, SwimIdle = 79090109939093, Swim = 132697394189921, ClimbAnim = 134630013742019, Animation1 = 92080889861410, Animation2 = 74451233229259 },
+	["Amazon Unboxed"] = { WalkAnim = 90478085024465, RunAnim = 134824450619865, JumpAnim = 121454505477205, FallAnim = 94788218468396, SwimIdle = 129126268464847, Swim = 105962919001086, ClimbAnim = 121145883950231, Animation1 = 98281136301627, Animation2 = nil },
+	Vampire = { WalkAnim = 10921326949, RunAnim = 10921320299, JumpAnim = 10921322186, FallAnim = 10921321317, SwimIdle = 10921325443, Swim = 10921324408, ClimbAnim = 10921314188, Animation1 = 10921315373, Animation2 = nil },
+	["Ninja"] = { Run=656118852, Walk=656121766, Jump=656117878, Fall=656115606, Swim=656119721, SwimIdle=656121397, Climb=656114359, Idle={656117400,656118341,886742569} },
+	["Robot"] = { Run=616091570, Walk=616095330, Jump=616090535, Fall=616087089, Swim=616092998, SwimIdle=616094091, Climb=616086039, Idle={616088211,616089559,885531463} },
+	["Levitation"] = { Run=616010382, Walk=616013216, Jump=616008936, Fall=616005863, Swim=616011509, SwimIdle=616012453, Climb=616003713, Idle={616006778,616008087,886862142} },
+	["Stylish"] = { Run=616140816, Walk=616146177, Jump=616139451, Fall=616134815, Swim=616143378, SwimIdle=616144772, Climb=616133594, Idle={616136790,616138447,886888594} },
+	["Bubbly"] = { Run=910025107, Walk=910034870, Jump=910016857, Fall=910001910, Swim=910028158, SwimIdle=910030921, Climb=909997997, Idle={910004836,910009958,1018536639} },
+	["Cartoon"] = { Run=742638842, Walk=742640026, Jump=742637942, Fall=742637151, Swim=742639220, SwimIdle=742639812, Climb=742636889, Idle={742637544,742638445,885477856} },
+}
+
+local EMOJIS = {
+	["Adidas Sports"] = "🏅", ["Adidas Community"] = "🤝", ["Adidas Aura"] = "✨", ["Wicked Popular"] = "💅",
+	["Elder"] = "👴", ["Zombie"] = "🧟", ["Mage"] = "🧙‍♂️", ["Catwalk Glam"] = "💃", ["Astronaut"] = "🧑‍🚀",
+	['Wicked "Dancing Through Life"'] = "🕺", ["Werewolf"] = "🐺", ["Superhero"] = "🦸‍♂️", ["Toy"] = "🧸",
+	["No Boundaries"] = "🌌", ["NFL"] = "🏈", ["Amazon Unboxed"] = "📦", ["Vampire"] = "🧛",
+	["Ninja"] = "🥷", ["Robot"] = "🤖", ["Levitation"] = "🪽", ["Stylish"] = "🕶️", ["Bubbly"] = "🫧", ["Cartoon"] = "🤪"
+}
+
+-- == UTILS (Original Logic) ==
+local function waitForAnimate(char)
+	for _ = 1, 40 do
+		local a = char:FindFirstChild("Animate")
+		if a and a:FindFirstChild("idle") and a:FindFirstChild("run") and a:FindFirstChild("walk") then return a end
+		task.wait(0.1)
+	end
+	return nil
+end
+
+local function setAnim(animObj, id)
+	if animObj and id then animObj.AnimationId = "rbxassetid://" .. tostring(id) end
+end
+
+local function stopAllTracks(hum)
+	if not hum then return end
+	for _, t in ipairs(hum:GetPlayingAnimationTracks()) do pcall(function() t:Stop(0) end) end
+end
+
+local function ensureAnim(folder, name)
+	if not folder then return nil end
+	local a = folder:FindFirstChild(name)
+	if not a then a = Instance.new("Animation"); a.Name = name; a.Parent = folder end
+	return a
+end
+
+local function ensureIdleSlots(idleFolder, n)
+	if not idleFolder then return end
+	for i=1, (n or 2) do ensureAnim(idleFolder, "Animation" .. i) end
+end
+
+local function pick(pack, ...)
+	for i = 1, select("#", ...) do
+		local k = select(i, ...); local v = pack[k]
+		if v ~= nil then return v end
+	end
+	return nil
+end
+
+-- == APPLY PACK LOGIC ==
+local ATTR_LAST = "AnimPack_Last"
+local applying = false
+
+local function applyPack(packName)
+	if applying then return false end
+	applying = true
+	local pack = PACKS[packName]
+	if not pack then applying = false; return false end
+	
+	local char = player.Character or player.CharacterAdded:Wait()
+	local animate = waitForAnimate(char)
+	if not animate then applying = false; return false end
+	
+	local hum = char:FindFirstChildOfClass("Humanoid")
+	stopAllTracks(hum)
+	
+	local runObj = ensureAnim(animate:FindFirstChild("run"), "RunAnim")
+	local walkObj = ensureAnim(animate:FindFirstChild("walk"), "WalkAnim")
+	local jumpObj = ensureAnim(animate:FindFirstChild("jump"), "JumpAnim")
+	local fallObj = ensureAnim(animate:FindFirstChild("fall"), "FallAnim")
+	local climbObj = ensureAnim(animate:FindFirstChild("climb"), "ClimbAnim")
+	local swimObj = ensureAnim(animate:FindFirstChild("swim"), "Swim")
+	local swimIdleObj = ensureAnim(animate:FindFirstChild("swimidle"), "SwimIdle")
+	local idleFolder = animate:FindFirstChild("idle")
+	
+	setAnim(walkObj, pick(pack, "WalkAnim", "Walk"))
+	setAnim(runObj, pick(pack, "RunAnim", "Run"))
+	setAnim(jumpObj, pick(pack, "JumpAnim", "Jump"))
+	setAnim(fallObj, pick(pack, "FallAnim", "Fall"))
+	setAnim(climbObj, pick(pack, "ClimbAnim", "Climb"))
+	setAnim(swimObj, pick(pack, "Swim"))
+	setAnim(swimIdleObj, pick(pack, "SwimIdle") or pick(pack, "Swim"))
+	
+	if idleFolder then
+		local a1 = pick(pack, "Animation1"); local a2 = pick(pack, "Animation2")
+		if a1 or a2 then
+			ensureIdleSlots(idleFolder, 2)
+			setAnim(idleFolder:FindFirstChild("Animation1"), a1 or a2)
+			setAnim(idleFolder:FindFirstChild("Animation2"), a2 or a1 or (a1 or a2))
+		elseif pack.Idle and #pack.Idle > 0 then
+			ensureIdleSlots(idleFolder, math.max(2, #pack.Idle))
+			setAnim(idleFolder:FindFirstChild("Animation1"), pack.Idle[1])
+			setAnim(idleFolder:FindFirstChild("Animation2"), pack.Idle[2] or pack.Idle[1])
+			for i = 3, #pack.Idle do
+				local a = idleFolder:FindFirstChild("Animation" .. i)
+				if a then setAnim(a, pack.Idle[i]) end
+			end
+		end
+	end
+	
+	animate.Disabled = true
+	task.wait(0.06)
+	animate.Disabled = false
+	
+	if hum then
+		pcall(function()
+			hum:ChangeState(Enum.HumanoidStateType.Landed)
+			task.wait(0.03)
+			hum:ChangeState(Enum.HumanoidStateType.Running)
+		end)
+	end
+	
+	pcall(function() player:SetAttribute(ATTR_LAST, packName) end)
+	applying = false
+	return true
+end
+
+player.CharacterAdded:Connect(function()
+	task.wait(0.6)
+	local saved = player:GetAttribute(ATTR_LAST)
+	if type(saved) == "string" and saved ~= "" and PACKS[saved] then applyPack(saved) end
+end)
+
+-- == TWEEN HELPERS ==
+local function createTween(object, props, duration, style, dir)
+	style = style or Enum.EasingStyle.Quint
+	dir = dir or Enum.EasingDirection.Out
+	local tweenInfo = TweenInfo.new(duration or 0.3, style, dir)
+	local tween = TweenService:Create(object, tweenInfo, props)
+	tween:Play()
+	return tween
+end
+
+-- == NEW CUSTOM UI ==
+local function getParentGui() return player:WaitForChild("PlayerGui") end
+
+-- Cleanup old GUI
+do
+	local pg = getParentGui()
+	local old = pg:FindFirstChild("AnimPackGUI")
+	if old then old:Destroy() end
+end
+
+-- Theme Colors
+local Theme = {
+	Background = Color3.fromRGB(24, 25, 30),
+	Header = Color3.fromRGB(32, 34, 40),
+	Stroke = Color3.fromRGB(50, 52, 60),
+	SearchBg = Color3.fromRGB(18, 19, 23),
+	ButtonBg = Color3.fromRGB(42, 45, 55),
+	ButtonHover = Color3.fromRGB(58, 62, 75),
+	TextMain = Color3.fromRGB(255, 255, 255),
+	TextSub = Color3.fromRGB(180, 185, 200),
+	Accent = Color3.fromRGB(100, 200, 255)
+}
+
+-- Cartoon Font
+local UiFont = Enum.Font.FredokaOne
+
+local gui = Instance.new("ScreenGui")
+gui.Name = "AnimPackGUI"
+gui.ResetOnSpawn = false
+gui.Parent = getParentGui()
+
+-- Notifications Container
+local notifContainer = Instance.new("Frame")
+notifContainer.Size = UDim2.new(0, 300, 1, -20)
+notifContainer.Position = UDim2.new(1, -320, 0, 10)
+notifContainer.BackgroundTransparency = 1
+notifContainer.Parent = gui
+
+local notifLayout = Instance.new("UIListLayout")
+notifLayout.SortOrder = Enum.SortOrder.LayoutOrder
+notifLayout.VerticalAlignment = Enum.VerticalAlignment.Bottom
+notifLayout.Padding = UDim.new(0, 10)
+notifLayout.Parent = notifContainer
+
+-- Notification Function
+local function sendNotification(titleText, descText, emojiIcon)
+	local notif = Instance.new("Frame")
+	notif.Size = UDim2.new(1, 400, 0, 60) -- Starts off-screen
+	notif.BackgroundColor3 = Theme.Background
+	notif.Parent = notifContainer
+	Instance.new("UICorner", notif).CornerRadius = UDim.new(0, 12)
+	Instance.new("UIStroke", notif).Color = Theme.Accent
+	
+	local icon = Instance.new("TextLabel")
+	icon.Size = UDim2.new(0, 50, 1, 0)
+	icon.BackgroundTransparency = 1
+	icon.Font = UiFont
+	icon.TextSize = 28
+	icon.Text = emojiIcon or "✨"
+	icon.Parent = notif
+	
+	local title = Instance.new("TextLabel")
+	title.Size = UDim2.new(1, -60, 0, 25)
+	title.Position = UDim2.new(0, 50, 0, 5)
+	title.BackgroundTransparency = 1
+	title.Font = UiFont
+	title.TextSize = 16
+	title.TextColor3 = Theme.TextMain
+	title.TextXAlignment = Enum.TextXAlignment.Left
+	title.Text = titleText
+	title.Parent = notif
+	
+	local desc = Instance.new("TextLabel")
+	desc.Size = UDim2.new(1, -60, 0, 20)
+	desc.Position = UDim2.new(0, 50, 0, 30)
+	desc.BackgroundTransparency = 1
+	desc.Font = Enum.Font.GothamMedium
+	desc.TextSize = 13
+	desc.TextColor3 = Theme.TextSub
+	desc.TextXAlignment = Enum.TextXAlignment.Left
+	desc.Text = descText
+	desc.Parent = notif
+	
+	-- Slide in
+	createTween(notif, {Size = UDim2.new(1, 0, 0, 60)}, 0.5, Enum.EasingStyle.Back)
+	
+	-- Slide out and destroy after 3s
+	task.delay(3, function()
+		local out = createTween(notif, {Size = UDim2.new(1, 400, 0, 60), BackgroundTransparency = 1}, 0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In)
+		out.Completed:Connect(function() notif:Destroy() end)
+	end)
+end
+
+-- Main Window
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 360, 0, 420)
+frame.Position = UDim2.new(0.5, -180, 0.5, -210)
+frame.BackgroundColor3 = Theme.Background
+frame.BorderSizePixel = 0
+frame.ClipsDescendants = true
+frame.Parent = gui
+
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 16)
+local stroke = Instance.new("UIStroke")
+stroke.Color = Theme.Stroke
+stroke.Thickness = 2
+stroke.Parent = frame
+
+-- Header
+local titleBar = Instance.new("Frame")
+titleBar.Size = UDim2.new(1, 0, 0, 50)
+titleBar.BackgroundColor3 = Theme.Header
+titleBar.Parent = frame
+Instance.new("UICorner", titleBar).CornerRadius = UDim.new(0, 16)
+
+-- Patch bottom corners of header to be square
+local patch = Instance.new("Frame")
+patch.Size = UDim2.new(1, 0, 0, 16)
+patch.Position = UDim2.new(0, 0, 1, -16)
+patch.BackgroundColor3 = Theme.Header
+patch.BorderSizePixel = 0
+patch.Parent = titleBar
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, -100, 1, 0)
+title.Position = UDim2.new(0, 16, 0, 0)
+title.BackgroundTransparency = 1
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.Font = UiFont
+title.TextSize = 20
+title.TextColor3 = Theme.TextMain
+title.Text = "🎭 Anim Packs"
+title.Parent = titleBar
+
+local hint = Instance.new("TextLabel")
+hint.Size = UDim2.new(0, 100, 1, 0)
+hint.Position = UDim2.new(1, -210, 0, 0)
+hint.BackgroundTransparency = 1
+hint.TextXAlignment = Enum.TextXAlignment.Right
+hint.Font = Enum.Font.GothamMedium
+hint.TextSize = 12
+hint.TextColor3 = Theme.TextSub
+hint.Text = "(Press , to hide)"
+hint.Parent = titleBar
+
+local miniBtn = Instance.new("TextButton")
+miniBtn.Size = UDim2.new(0, 40, 0, 40)
+miniBtn.Position = UDim2.new(1, -85, 0, 5)
+miniBtn.Text = "➖"
+miniBtn.Font = UiFont
+miniBtn.TextSize = 16
+miniBtn.TextColor3 = Theme.TextMain
+miniBtn.BackgroundColor3 = Theme.ButtonBg
+miniBtn.Parent = titleBar
+Instance.new("UICorner", miniBtn).CornerRadius = UDim.new(0, 10)
+
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0, 40, 0, 40)
+closeBtn.Position = UDim2.new(1, -45, 0, 5)
+closeBtn.Text = "✖️"
+closeBtn.Font = UiFont
+closeBtn.TextSize = 14
+closeBtn.TextColor3 = Color3.fromRGB(255, 100, 100)
+closeBtn.BackgroundColor3 = Theme.ButtonBg
+closeBtn.Parent = titleBar
+Instance.new("UICorner", closeBtn).CornerRadius = UDim.new(0, 10)
+
+-- Dragging Logic
+local dragging, dragStart, startPos = false, nil, nil
+titleBar.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPos = frame.Position
+	end
+end)
+UserInputService.InputEnded:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
+end)
+UserInputService.InputChanged:Connect(function(input)
+	if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+		local delta = input.Position - dragStart
+		frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	end
+end)
+
+-- Button Hover Animations
+local function applyHoverTweens(btn)
+	btn.MouseEnter:Connect(function() createTween(btn, {BackgroundColor3 = Theme.ButtonHover}) end)
+	btn.MouseLeave:Connect(function() createTween(btn, {BackgroundColor3 = Theme.ButtonBg}) end)
+	btn.MouseButton1Down:Connect(function() createTween(btn, {Size = UDim2.new(btn.Size.X.Scale, btn.Size.X.Offset - 4, btn.Size.Y.Scale, btn.Size.Y.Offset - 2)}) end)
+	btn.MouseButton1Up:Connect(function() createTween(btn, {Size = UDim2.new(btn.Size.X.Scale, btn.Size.X.Offset + 4, btn.Size.Y.Scale, btn.Size.Y.Offset + 2)}) end)
+end
+
+applyHoverTweens(miniBtn)
+applyHoverTweens(closeBtn)
+
+-- Content Area (Hides when minimized)
+local contentArea = Instance.new("Frame")
+contentArea.Size = UDim2.new(1, 0, 1, -50)
+contentArea.Position = UDim2.new(0, 0, 0, 50)
+contentArea.BackgroundTransparency = 1
+contentArea.Parent = frame
+
+local current = Instance.new("TextLabel")
+current.Size = UDim2.new(1, -32, 0, 30)
+current.Position = UDim2.new(0, 16, 0, 5)
+current.BackgroundTransparency = 1
+current.TextXAlignment = Enum.TextXAlignment.Left
+current.Font = UiFont
+current.TextSize = 14
+current.TextColor3 = Theme.Accent
+current.Text = "💎 Current: None"
+current.Parent = contentArea
+
+-- Search Bar
+local searchBox = Instance.new("TextBox")
+searchBox.Size = UDim2.new(1, -32, 0, 40)
+searchBox.Position = UDim2.new(0, 16, 0, 40)
+searchBox.BackgroundColor3 = Theme.SearchBg
+searchBox.TextColor3 = Theme.TextMain
+searchBox.PlaceholderText = "🔍 Search packs..."
+searchBox.PlaceholderColor3 = Theme.TextSub
+searchBox.Text = ""
+searchBox.ClearTextOnFocus = false
+searchBox.Font = Enum.Font.GothamMedium
+searchBox.TextSize = 14
+searchBox.BorderSizePixel = 0
+searchBox.Parent = contentArea
+Instance.new("UICorner", searchBox).CornerRadius = UDim.new(0, 10)
+Instance.new("UIStroke", searchBox).Color = Theme.Stroke
+
+-- List Container
+local listFrame = Instance.new("Frame")
+listFrame.Size = UDim2.new(1, -32, 1, -100)
+listFrame.Position = UDim2.new(0, 16, 0, 90)
+listFrame.BackgroundTransparency = 1
+listFrame.Parent = contentArea
+
+local scroll = Instance.new("ScrollingFrame")
+scroll.Size = UDim2.new(1, 0, 1, 0)
+scroll.BackgroundTransparency = 1
+scroll.BorderSizePixel = 0
+scroll.ScrollBarThickness = 4
+scroll.ScrollBarImageColor3 = Theme.Accent
+scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+scroll.Parent = listFrame
+
+local layout = Instance.new("UIListLayout")
+layout.Padding = UDim.new(0, 8)
+layout.SortOrder = Enum.SortOrder.LayoutOrder
+layout.Parent = scroll
+
+local function refreshCanvas()
+	task.wait()
+	scroll.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 10)
+end
+layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(refreshCanvas)
+
+-- Min/Max Logic
+local minimized = false
+local expandedSize = frame.Size
+local minimizedSize = UDim2.new(expandedSize.X.Scale, expandedSize.X.Offset, 0, 50)
+
+local function setMinimized(on)
+	minimized = on
+	if minimized then
+		createTween(frame, {Size = minimizedSize}, 0.4)
+		miniBtn.Text = "➕"
+		contentArea.Visible = false
+	else
+		createTween(frame, {Size = expandedSize}, 0.4)
+		miniBtn.Text = "➖"
+		contentArea.Visible = true
+	end
+end
+
+miniBtn.Activated:Connect(function() setMinimized(not minimized) end)
+
+closeBtn.Activated:Connect(function()
+	local t = createTween(frame, {Size = UDim2.new(0, 0, 0, 0)}, 0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In)
+	t.Completed:Connect(function() gui:Destroy() end)
+end)
+
+-- Comma Key Toggle
+UserInputService.InputBegan:Connect(function(input, gp)
+	if gp then return end
+	if input.KeyCode == Enum.KeyCode.Comma then
+		gui.Enabled = not gui.Enabled
+	end
+end)
+
+-- Populate List
+local ADIDAS_TOP_ORDER = { "Adidas Sports", "Adidas Community", "Adidas Aura" }
+local adidasRank = {}
+for i, n in ipairs(ADIDAS_TOP_ORDER) do adidasRank[n] = i end
+local allNames = {}
+for name in pairs(PACKS) do table.insert(allNames, name) end
+
+table.sort(allNames, function(a, b)
+	local ra, rb = adidasRank[a], adidasRank[b]
+	if ra and rb then return ra < rb end
+	if ra then return true end
+	if rb then return false end
+	return a:lower() < b:lower() end
+)
+
+local buttonsByName = {}
+
+local function createButton(name, order)
+	local btn = Instance.new("TextButton")
+	btn.Size = UDim2.new(1, 0, 0, 42)
+	btn.BackgroundColor3 = Theme.ButtonBg
+	btn.TextColor3 = Theme.TextMain
+	btn.Font = UiFont
+	btn.TextSize = 14
+	btn.Text = "   " .. (EMOJIS[name] or "✨") .. " " .. name
+	btn.TextXAlignment = Enum.TextXAlignment.Left
+	btn.AutoButtonColor = false -- Using custom tween
+	btn.LayoutOrder = order
+	btn.BorderSizePixel = 0
+	btn.Parent = scroll
+	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
+	
+	-- Hover logic
+	btn.MouseEnter:Connect(function() createTween(btn, {BackgroundColor3 = Theme.ButtonHover}) end)
+	btn.MouseLeave:Connect(function() createTween(btn, {BackgroundColor3 = Theme.ButtonBg}) end)
+	
+	-- Click Animation & Execution
+	btn.Activated:Connect(function()
+		local t = createTween(btn, {Size = UDim2.new(1, -6, 0, 36)}, 0.1)
+		t.Completed:Connect(function() createTween(btn, {Size = UDim2.new(1, 0, 0, 42)}, 0.1) end)
+		
+		local ok = applyPack(name)
+		if ok then
+			current.Text = "💎 Current: " .. name
+			sendNotification("Equipped Pack!", "Successfully applied " .. name, EMOJIS[name])
+		else
+			current.Text = "❌ Failed: " .. name
+			sendNotification("Error", "Failed to apply " .. name, "⚠️")
+		end
+	end)
+	buttonsByName[name] = btn
+end
+
+for i, name in ipairs(allNames) do createButton(name, i) end
+refreshCanvas()
+
+local function applyFilter(text)
+	text = (text or ""):lower()
+	for name, btn in pairs(buttonsByName) do
+		btn.Visible = (text == "") or (name:lower():find(text, 1, true) ~= nil)
+	end
+	refreshCanvas()
+end
+
+searchBox:GetPropertyChangedSignal("Text"):Connect(function() applyFilter(searchBox.Text) end)
+applyFilter("")
+
+-- Auto-load last
+task.defer(function()
+	-- Slide in Main UI intro
+	frame.Size = UDim2.new(0, 0, 0, 0)
+	createTween(frame, {Size = expandedSize}, 0.5, Enum.EasingStyle.Back)
+	
+	local saved = player:GetAttribute(ATTR_LAST)
+	if type(saved) == "string" and saved ~= "" and PACKS[saved] then
+		current.Text = "💎 Current: " .. saved
+		task.wait(0.2)
+		applyPack(saved)
+		sendNotification("Restored Pack!", "Loaded your last used pack: " .. saved, EMOJIS[saved])
+	else
+		sendNotification("UI Loaded", "Welcome! Pick an animation pack.", "🎉")
+	end
+end)
