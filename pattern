@@ -726,9 +726,16 @@ local rightLeg = character:FindFirstChild("RightFoot")
 local leg = leftLeg or rightLeg
 
 if leg then
-	local predictedCF = leg.CFrame + (leg.AssemblyLinearVelocity * PREDICTION_FACTOR)
+	local velocity = leg.AssemblyLinearVelocity
+local speed = velocity.Magnitude
 
-	
+local predictedCF
+
+if speed >= 30 and speed <= 100 then
+    predictedCF = leg.CFrame + (velocity * PREDICTION_FACTOR)
+else
+    predictedCF = leg.CFrame
+end
                 local propsPerTarget = m_floor(#cachedProps / tCount)
                 if propsPerTarget == 0 then propsPerTarget = 1 end
                 local startIdx = ((tIdx - 1) * propsPerTarget) + 1
