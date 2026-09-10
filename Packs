@@ -3,7 +3,7 @@ local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
-
+print("started")
 local PACKS = {
 
 
@@ -433,6 +433,7 @@ local PACKS = {
 	["Cartoon"] = { Run=742638842, Walk=742640026, Jump=742637942, Fall=742637151, Swim=742639220, SwimIdle=742639812, Climb=742636889, Idle={742637544,742638445,885477856} },
 }
 
+print("ids loaded")
 -- Emoji Mapping for UI Polish
 local EMOJIS = {
 	["Adidas"] = "👟", ["Wicked"] = "🧙‍♀️", ["Elder"] = "🧓", ["Zombie"] = "🧟",
@@ -588,6 +589,7 @@ local function applyPack(packName)
 	return true
 end
 
+print("logic loaded")
 -- GUI CONSTRUCTION
 local function getParentGui()
 	local success, result = pcall(function() return game:GetService("CoreGui") end)
@@ -1006,7 +1008,7 @@ end)
 
 
 
-
+print("gui loaded")
 
 
 --[[
@@ -1425,3 +1427,4 @@ Copy.MouseButton1Click:Connect(function()
 
 end) 
 ]]
+print("finish")
