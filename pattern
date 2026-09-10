@@ -753,6 +753,7 @@ if leg then
                 end
             end
         end
+end
 
     elseif activeMode == "Chair" then
         local assignedTracker = {}
