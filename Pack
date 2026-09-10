@@ -9,28 +9,49 @@ local PACK_URL = "https://raw.githubusercontent.com/Sam00-debug/C-/refs/heads/ma
 
 local PACKS = {}
 
+local function countPacks(tbl)
+	local count = 0
+
+	for _ in pairs(tbl) do
+		count += 1
+	end
+
+	return count
+end
+
 local function loadPacks()
-	local success, result = pcall(function()
+	local success, response = pcall(function()
 		return game:HttpGet(PACK_URL)
 	end)
 
 	if not success then
-		warn("Failed to download AnimationPacks.json")
+		warn("❌ Failed to fetch animation packs:", response)
 		return false
 	end
 
-	local ok, data = pcall(function()
-		return HttpService:JSONDecode(result)
+	if type(response) ~= "string" or response == "" then
+		warn("❌ GitHub returned empty data")
+		return false
+	end
+
+	local decodeSuccess, data = pcall(function()
+		return HttpService:JSONDecode(response)
 	end)
 
-	if not ok or type(data) ~= "table" then
-		warn("Invalid AnimationPacks.json")
+	if not decodeSuccess then
+		warn("❌ Invalid JSON in Pack ids:", data)
+		return false
+	end
+
+	if type(data) ~= "table" then
+		warn("❌ Pack ids must contain a JSON object")
 		return false
 	end
 
 	PACKS = data
 
-	print("Animation packs loaded:", #PACKS)
+	print("✅ Animation packs loaded:", countPacks(PACKS))
+
 	return true
 end
 
@@ -38,7 +59,7 @@ if not loadPacks() then
 	return
 end
 
-print("ids loaded")
+print("✅ IDs loaded")
 
 local EMOJIS = {
 	["Adidas Sports"] = "🏅", ["Adidas Community"] = "🤝", ["Adidas Aura"] = "✨", ["Wicked Popular"] = "💅",
