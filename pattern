@@ -662,7 +662,7 @@ RunService.Heartbeat:Connect(function(dt)
         end
         return
     end
-
+local targetList = {}
     for plr, isSelected in pairs(selectedPlayers) do
     if isSelected
         and plr.Character
