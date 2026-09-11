@@ -731,7 +731,7 @@ local speed = velocity.Magnitude
 
 local predictedCF
 
-if speed >= 30 and speed <= 100 then
+if speed >= 30 and speed <= 30.1 then
     predictedCF = leg.CFrame + (velocity * PREDICTION_FACTOR)
 else
     predictedCF = leg.CFrame
