@@ -313,11 +313,18 @@ local function refreshPlayers()
             uLabel.Font = Enum.Font.Gotham; uLabel.TextSize = 8; uLabel.TextXAlignment = Enum.TextXAlignment.Left
 
             btn.MouseButton1Click:Connect(function()
-                selectedPlayers[plr] = not selectedPlayers[plr]
-                btn.BackgroundColor3 = selectedPlayers[plr] and Colors.Primary or Colors.Surface
-                dLabel.TextColor3 = selectedPlayers[plr] and Color3.new(0,0,0) or Colors.Text
-                uLabel.TextColor3 = selectedPlayers[plr] and Color3.fromRGB(40,40,40) or Color3.fromRGB(150,150,150)
-            end)
+    if selectedPlayers[plr] then
+        selectedPlayers[plr] = nil
+    else
+        selectedPlayers[plr] = true
+    end
+
+    btn.BackgroundColor3 = selectedPlayers[plr] and Colors.Primary or Colors.Surface
+    dLabel.TextColor3 = selectedPlayers[plr] and Color3.new(0,0,0) or Colors.Text
+    uLabel.TextColor3 = selectedPlayers[plr]
+        and Color3.fromRGB(40,40,40)
+        or Color3.fromRGB(150,150,150)
+end)
         end
     end
 end
@@ -656,12 +663,15 @@ RunService.Heartbeat:Connect(function(dt)
         return
     end
 
-    local targetList = {}
-    for plr, _ in pairs(selectedPlayers) do
-        if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and plr.Character:FindFirstChild("Humanoid") then
-            table.insert(targetList, plr)
-        end
+    for plr, isSelected in pairs(selectedPlayers) do
+    if isSelected
+        and plr.Character
+        and plr.Character:FindFirstChild("HumanoidRootPart")
+        and plr.Character:FindFirstChild("Humanoid") then
+
+        table.insert(targetList, plr)
     end
+end
 
     local tCount = #targetList
     if tCount == 0 then return end
